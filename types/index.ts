@@ -4,6 +4,7 @@ export type Startup = Tables<"startup"> & {
   _createdAt?: string;
 };
 
-export type Author = Tables<"author">;
+export type Author = Tables<"author"> &{_createdAt:string};
 
 export type StartupWithAuthor = Startup & { author: Author | null };
+

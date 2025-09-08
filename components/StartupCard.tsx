@@ -7,7 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Startup, Author } from "@/types";
 // import { Skeleton } from "@/components/ui/skeleton";
 
-export type StartupTypeCard = Omit<Startup, "author"> & { author?: Author };
+export type StartupTypeCard = Omit<Startup, "author"> & {
+  author?: Author;
+};
 
 const StartupCard = ({ post }: { post: StartupTypeCard }) => {
   console.log("post", post);
@@ -30,7 +32,7 @@ const StartupCard = ({ post }: { post: StartupTypeCard }) => {
   return (
     <li className="startup-card group">
       <div className="flex-between">
-        <p className="startup_card_date">{formatDate(_createdAt)}</p>
+        <p className="startup_card_date">{formatDate(_createdAt||"2025-9-8")}</p>
         <div className="flex gap-1.5">
           <EyeIcon className="size-6 text-primary" />
           <span className="text-16-medium">{views}</span>
@@ -42,13 +44,13 @@ const StartupCard = ({ post }: { post: StartupTypeCard }) => {
           <Link href={`/user/${author?.id}`}>
             <p className="text-16-medium line-clamp-1">{author?.name}</p>
           </Link>
-          <Link href={`/startup/${id}`}>
+          <Link href={`/startup/${author?.id}`}>
             <h3 className="text-26-semibold line-clamp-1">{title}</h3>
           </Link>
         </div>
-        <Link href={`/user/${author?.walletAddress}`}>
+        <Link href={`/user/${author?.id}`}>
           <Image
-            src={image || defaultImage}
+            src={author?.image || defaultImage}
             alt={author?.name || "Author"}
             width={48}
             height={48}
