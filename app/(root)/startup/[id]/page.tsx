@@ -56,6 +56,8 @@ const StartupPage = async ({ params }: PageProps) => {
 
     const parsedContent = post.pitch;
     const authorWalletAddress = post.walletAddress || "";
+    console.log("safeAuthor", safeAuthor);
+    console.log("post", post);
 
     return (
       <>
@@ -74,9 +76,9 @@ const StartupPage = async ({ params }: PageProps) => {
           />
           <div className="space-y-5 mt-10 max-w-4xl mx-auto">
             <div className="flex-between gap-5">
-              {safeAuthor._id && (
+              {safeAuthor.id && (
                 <Link
-                  href={`/user/${safeAuthor._id}`}
+                  href={`/user/${safeAuthor.id}`}
                   className="flex gap-2 items-center mb-3"
                 >
                   <Image
