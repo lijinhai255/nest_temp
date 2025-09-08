@@ -72,7 +72,8 @@ const StartupForm = () => {
         return { ...state, error: error.message, status: "ERROR" };
       }
 
-      if (data && data[0]) {
+      // 修复：检查 data 是否为数组，并安全地访问第一个元素
+      if (data && Array.isArray(data) && data.length > 0) {
         toast({
           title: "Success",
           description: "Your startup pitch has been created successfully",
