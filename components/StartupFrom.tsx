@@ -13,11 +13,11 @@ import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi"; // 导入 useAccount hook
 import { createStartup } from "@/lib/db/startup"; // 导入 createStartup 函数
 
-// 定义表单状态类型
+// 定义表单状态类型，确保与 useActionState 期望的类型兼容
 interface FormState {
   error: string;
   status: "INITIAL" | "SUCCESS" | "ERROR";
-  data?: Record<string, string | number | boolean>; // 修复: 替换 any 为更具体的类型
+  data?: Record<string, string | number | boolean>;
 }
 
 const StartupForm = () => {
@@ -27,8 +27,8 @@ const StartupForm = () => {
   const router = useRouter();
   const { address } = useAccount(); // 获取用户的钱包地址
 
-  // 修改函数签名以匹配 useActionState 期望的格式
-  const handleFormSubmit = async (state: FormState) => {
+  // 确保返回类型与 FormState 匹配
+  const handleFormSubmit = async (state: FormState): Promise<FormState> => {
     try {
       // 从 FormData 中获取表单数据
       const formData = new FormData();
@@ -69,7 +69,11 @@ const StartupForm = () => {
           variant: "destructive",
         });
 
-        return { ...state, error: error.message, status: "ERROR" };
+        return {
+          ...state,
+          error: error.message,
+          status: "ERROR" as const,
+        };
       }
 
       // 修复：检查 data 是否为数组，并安全地访问第一个元素
@@ -82,10 +86,14 @@ const StartupForm = () => {
         // 使用 data[0].id 作为创建的 startup 的 ID
         router.push(`/startup/${data[0].id}`);
 
-        return { ...state, data: data[0], status: "SUCCESS" };
+        return {
+          ...state,
+          data: data[0] as Record<string, string | number | boolean>,
+          status: "SUCCESS" as const,
+        };
       }
 
-      return { ...state, status: "SUCCESS" };
+      return { ...state, status: "SUCCESS" as const };
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErorrs = error.flatten().fieldErrors;
@@ -98,7 +106,11 @@ const StartupForm = () => {
           variant: "destructive",
         });
 
-        return { ...state, error: "Validation failed", status: "ERROR" };
+        return {
+          ...state,
+          error: "Validation failed",
+          status: "ERROR" as const,
+        };
       }
 
       toast({
@@ -110,14 +122,14 @@ const StartupForm = () => {
       return {
         ...state,
         error: "An unexpected error has occurred",
-        status: "ERROR",
+        status: "ERROR" as const,
       };
     }
   };
 
   const [state, formAction, isPending] = useActionState(handleFormSubmit, {
     error: "",
-    status: "INITIAL",
+    status: "INITIAL" as const,
   });
 
   // 使用 state 变量，这样它就不会被标记为未使用
