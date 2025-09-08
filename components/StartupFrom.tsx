@@ -13,6 +13,13 @@ import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi"; // 导入 useAccount hook
 import { createStartup } from "@/lib/db/startup"; // 导入 createStartup 函数
 
+// 定义表单状态类型
+interface FormState {
+  error: string;
+  status: "INITIAL" | "SUCCESS" | "ERROR";
+  data?: Record<string, any>;
+}
+
 const StartupForm = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pitch, setPitch] = useState("");
@@ -20,7 +27,7 @@ const StartupForm = () => {
   const router = useRouter();
   const { address } = useAccount(); // 获取用户的钱包地址
 
-  const handleFormSubmit = async (prevState: any, formData: FormData) => {
+  const handleFormSubmit = async (prevState: FormState, formData: FormData) => {
     try {
       const formValues = {
         title: formData.get("title") as string,
@@ -32,6 +39,9 @@ const StartupForm = () => {
 
       await formSchema.parseAsync(formValues);
 
+      // 创建当前时间作为 _createdAt 字段的值
+      const currentDate = new Date().toISOString();
+
       // 创建 startupData 对象，使用数据库中存在的字段
       const startupData = {
         title: formValues.title,
@@ -42,7 +52,7 @@ const StartupForm = () => {
         walletAddress: address || "", // 将钱包地址添加到数据中
         views: 0, // 初始化浏览次数为 0
         slug: formValues.title.toLowerCase().replace(/\s+/g, "-"), // 创建一个简单的 slug
-        _createdAt: new Date().toISOString(),
+        _createdAt: currentDate, // 添加创建时间
       };
 
       // 使用 createStartup 函数创建 startup 记录
@@ -100,7 +110,7 @@ const StartupForm = () => {
     }
   };
 
-  const [state, formAction, isPending] = useActionState(handleFormSubmit, {
+  const [_, formAction, isPending] = useActionState(handleFormSubmit, {
     error: "",
     status: "INITIAL",
   });
