@@ -9,8 +9,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 export type StartupTypeCard = Omit<Startup, "author"> & { author?: Author };
 
 const StartupCard = ({ post }: { post: StartupTypeCard }) => {
-  const { _createdAt, views, author, title, category, id, image, description } =
-    post;
+  console.log("post", post);
+
+  const {
+    _createdAt,
+    views,
+    author,
+    title,
+    category,
+    id,
+    image,
+    description,
+    authorWalletAddress,
+  } = post;
 
   // 默认图片路径，当 image 为 undefined 时使用
   const defaultImage = "/placeholder-image.jpg";
@@ -34,9 +45,9 @@ const StartupCard = ({ post }: { post: StartupTypeCard }) => {
             <h3 className="text-26-semibold line-clamp-1">{title}</h3>
           </Link>
         </div>
-        <Link href={`/user/${author?.id}`}>
+        <Link href={`/user/${author?.authorWalletAddress}`}>
           <Image
-            src={author?.image || defaultImage}
+            src={image || defaultImage}
             alt={author?.name || "Author"}
             width={48}
             height={48}
