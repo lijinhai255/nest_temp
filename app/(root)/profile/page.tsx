@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
-// import { UserProfileEdit } from "@/components/UserProfileEdit";
+import { UserProfileEdit } from "@/components/UserProfileEdit";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -196,11 +196,13 @@ export default function ProfilePage() {
 
         <TabsContent value="edit">
           <div className="bg-white shadow-100 border border-black/10 p-8 rounded-lg">
-            {/* <UserProfileEdit
-              initialData={userData || {}}
-              onSuccess={fetchUserData}
-              walletAddress={address}
-            /> */}
+            {userData?.walletAddress && (
+              <UserProfileEdit
+                initialData={userData}
+                onSuccess={fetchUserData}
+                walletAddress={address}
+              />
+            )}
           </div>
         </TabsContent>
       </Tabs>
