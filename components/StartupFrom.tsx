@@ -3,7 +3,7 @@
 import React, { useState, useActionState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import MDEditor from "@uiw/react-md-editor";
+import dynamic from "next/dynamic"; // 导入 dynamic 用于客户端渲染
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 import { formSchema } from "@/lib/validation";
@@ -12,6 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi"; // 导入 useAccount hook
 import { createStartup } from "@/lib/db/startup"; // 导入 createStartup 函数
+
+// 使用 dynamic 导入 MDEditor 组件，禁用 SSR
+const MDEditor = dynamic(
+  () => import("@uiw/react-md-editor"),
+  { ssr: false } // 禁用服务器端渲染
+);
 
 // 定义表单状态类型，确保与 useActionState 期望的类型兼容
 interface FormState {
@@ -27,20 +33,24 @@ const StartupForm = () => {
   const router = useRouter();
   const { address } = useAccount(); // 获取用户的钱包地址
 
-  // 确保返回类型与 FormState 匹配
-  const handleFormSubmit = async (state: FormState): Promise<FormState> => {
+  // 修改函数签名，接收 FormData 作为第二个参数
+  const handleFormSubmit = async (
+    state: FormState,
+    formData: FormData
+  ): Promise<FormState> => {
     try {
-      // 从 FormData 中获取表单数据
-      const formData = new FormData();
-
+      // 从传入的 FormData 中获取表单数据
       const formValues = {
         title: formData.get("title") as string,
         description: formData.get("description") as string,
         category: formData.get("category") as string,
         link: formData.get("link") as string,
-        pitch,
+        pitch, // 使用状态中的 pitch 值
       };
 
+      console.log("formValues", formValues);
+
+      // 验证表单数据
       await formSchema.parseAsync(formValues);
 
       // 创建当前时间作为 _createdAt 字段的值
@@ -58,6 +68,8 @@ const StartupForm = () => {
         slug: formValues.title.toLowerCase().replace(/\s+/g, "-"), // 创建一个简单的 slug
         _createdAt: currentDate, // 添加创建时间
       };
+
+      console.log("startupData", startupData);
 
       // 使用 createStartup 函数创建 startup 记录
       const { data, error } = await createStartup(startupData);
@@ -112,6 +124,8 @@ const StartupForm = () => {
           status: "ERROR" as const,
         };
       }
+
+      console.error("Form submission error:", error);
 
       toast({
         title: "Error",
@@ -225,10 +239,13 @@ const StartupForm = () => {
           Pitch
         </label>
 
+        {/* 添加隐藏的输入字段，用于提交 pitch 值 */}
+        <input type="hidden" name="pitch" value={pitch} />
+
         <MDEditor
           value={pitch}
           onChange={(value) => setPitch(value as string)}
-          id="pitch"
+          id="pitch-editor" // 改为不同的 ID，避免与隐藏字段冲突
           preview="edit"
           height={300}
           style={{ borderRadius: 20, overflow: "hidden" }}
