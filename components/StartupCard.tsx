@@ -14,17 +14,8 @@ export type StartupTypeCard = Omit<Startup, "author"> & {
 const StartupCard = ({ post }: { post: StartupTypeCard }) => {
   console.log("post", post);
 
-  const {
-    _createdAt,
-    views,
-    author,
-    title,
-    category,
-    id,
-    image,
-    description,
-    walletAddress,
-  } = post;
+  const { _createdAt, views, author, title, category, id, image, description } =
+    post;
 
   // 默认图片路径，当 image 为 undefined 时使用
   const defaultImage = "/placeholder-image.jpg";
