@@ -8,7 +8,7 @@ import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAuthorByWalletAddress } from "@/lib/db/author";
 import { Author } from "@/types";
-import WalletConnect from "@/components/WalletConnect";
+import { WalletConnect } from "@/components/WalletConnect";
 // import TransactionHistory from "@/components/TransactionHistory";
 
 export default function ProfilePage() {
