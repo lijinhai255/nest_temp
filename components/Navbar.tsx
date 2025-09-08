@@ -12,7 +12,7 @@ export default function Navbar() {
         <div className="flex items-center gap-5 text-black">
           <>
             <Link href="/startup/ai" className="text-gray-600">
-              <span>AI</span>
+              <span>AI-helper</span>
             </Link>
             <Link href="/startup/create" className="text-gray-600">
               <span>Create</span>
