@@ -7,6 +7,7 @@ export default async function Home({
 }) {
   const query = (await searchParams).query;
   const { data: posts } = await getStartups();
+  console.log("posts", posts);
   return (
     <>
       <section className="pink_container">
