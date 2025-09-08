@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Startup, Author } from "@/types";
 // import { Skeleton } from "@/components/ui/skeleton";
 
 export type StartupTypeCard = Omit<Startup, "author"> & { author?: Author };
@@ -20,7 +21,7 @@ const StartupCard = ({ post }: { post: StartupTypeCard }) => {
     id,
     image,
     description,
-    authorWalletAddress,
+    walletAddress,
   } = post;
 
   // 默认图片路径，当 image 为 undefined 时使用
@@ -45,7 +46,7 @@ const StartupCard = ({ post }: { post: StartupTypeCard }) => {
             <h3 className="text-26-semibold line-clamp-1">{title}</h3>
           </Link>
         </div>
-        <Link href={`/user/${author?.authorWalletAddress}`}>
+        <Link href={`/user/${author?.walletAddress}`}>
           <Image
             src={image || defaultImage}
             alt={author?.name || "Author"}

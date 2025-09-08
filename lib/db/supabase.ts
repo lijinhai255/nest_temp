@@ -71,7 +71,7 @@ export type Database = {
       }
       startup: {
         Row: {
-          authorWalletAddress: string
+          walletAddress: string
           category: string | null
           description: string | null
           id: number
@@ -82,7 +82,7 @@ export type Database = {
           views: number | null
         }
         Insert: {
-          authorWalletAddress: string
+          walletAddress: string
           category?: string | null
           description?: string | null
           id?: number
@@ -93,7 +93,7 @@ export type Database = {
           views?: number | null
         }
         Update: {
-          authorWalletAddress?: string
+          walletAddress?: string
           category?: string | null
           description?: string | null
           id?: number
