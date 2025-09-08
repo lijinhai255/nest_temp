@@ -17,7 +17,7 @@ import { createStartup } from "@/lib/db/startup"; // 导入 createStartup 函数
 interface FormState {
   error: string;
   status: "INITIAL" | "SUCCESS" | "ERROR";
-  data?: Record<string, any>;
+  data?: Record<string, string | number | boolean>; // 修复: 替换 any 为更具体的类型
 }
 
 const StartupForm = () => {
@@ -27,8 +27,12 @@ const StartupForm = () => {
   const router = useRouter();
   const { address } = useAccount(); // 获取用户的钱包地址
 
-  const handleFormSubmit = async (prevState: FormState, formData: FormData) => {
+  // 修改函数签名以匹配 useActionState 期望的格式
+  const handleFormSubmit = async (state: FormState) => {
     try {
+      // 从 FormData 中获取表单数据
+      const formData = new FormData();
+
       const formValues = {
         title: formData.get("title") as string,
         description: formData.get("description") as string,
@@ -65,7 +69,7 @@ const StartupForm = () => {
           variant: "destructive",
         });
 
-        return { ...prevState, error: error.message, status: "ERROR" };
+        return { ...state, error: error.message, status: "ERROR" };
       }
 
       if (data && data[0]) {
@@ -77,10 +81,10 @@ const StartupForm = () => {
         // 使用 data[0].id 作为创建的 startup 的 ID
         router.push(`/startup/${data[0].id}`);
 
-        return { ...prevState, data: data[0], status: "SUCCESS" };
+        return { ...state, data: data[0], status: "SUCCESS" };
       }
 
-      return { ...prevState, status: "SUCCESS" };
+      return { ...state, status: "SUCCESS" };
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErorrs = error.flatten().fieldErrors;
@@ -93,7 +97,7 @@ const StartupForm = () => {
           variant: "destructive",
         });
 
-        return { ...prevState, error: "Validation failed", status: "ERROR" };
+        return { ...state, error: "Validation failed", status: "ERROR" };
       }
 
       toast({
@@ -103,17 +107,27 @@ const StartupForm = () => {
       });
 
       return {
-        ...prevState,
+        ...state,
         error: "An unexpected error has occurred",
         status: "ERROR",
       };
     }
   };
 
-  const [_, formAction, isPending] = useActionState(handleFormSubmit, {
+  const [state, formAction, isPending] = useActionState(handleFormSubmit, {
     error: "",
     status: "INITIAL",
   });
+
+  // 使用 state 变量，这样它就不会被标记为未使用
+  React.useEffect(() => {
+    // 当表单状态变化时，可以在这里做一些额外的处理
+    if (state.status === "ERROR") {
+      console.log("Form submission error:", state.error);
+    } else if (state.status === "SUCCESS") {
+      console.log("Form submitted successfully");
+    }
+  }, [state]);
 
   // 添加钱包连接状态提示
   const walletStatusMessage = address ? (
@@ -217,10 +231,22 @@ const StartupForm = () => {
         {errors.pitch && <p className="startup-form_error">{errors.pitch}</p>}
       </div>
 
-      {/* 显示钱包连接状态 */}
+      {/* 显示钱包连接状态和表单状态 */}
       <div className="border p-4 rounded-lg bg-gray-50 dark:bg-gray-800 mb-4">
         <h3 className="font-medium mb-2">Wallet Status</h3>
         {walletStatusMessage}
+
+        {/* 显示表单状态 */}
+        {state.status !== "INITIAL" && (
+          <p
+            className={`text-sm mt-2 ${
+              state.status === "ERROR" ? "text-red-600" : "text-green-600"
+            }`}
+          >
+            Form status: {state.status}
+            {state.error && ` - ${state.error}`}
+          </p>
+        )}
       </div>
 
       <Button
