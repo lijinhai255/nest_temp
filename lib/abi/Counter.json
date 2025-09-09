@@ -1,0 +1,102 @@
+{
+  "address": "0x46f5eAfDFf5eeb702D258205Df8F2A3906853996",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "by",
+          "type": "uint256"
+        }
+      ],
+      "name": "Increment",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "inc",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "by",
+          "type": "uint256"
+        }
+      ],
+      "name": "incBy",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "x",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x3a6e2a52ae46772a9f1686ad39dac363ed9144aecc98340d3d767a2473ad6ec2",
+  "receipt": {
+    "to": null,
+    "from": "0x2bf426d599f1942B4C71bcd402a835A570Bb1B04",
+    "contractAddress": "0x46f5eAfDFf5eeb702D258205Df8F2A3906853996",
+    "transactionIndex": 108,
+    "gasUsed": "166281",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xc1f2ac3fac34d742984292e1a3b0c2dd040ea9d4a1272762f072112d9671c147",
+    "transactionHash": "0x3a6e2a52ae46772a9f1686ad39dac363ed9144aecc98340d3d767a2473ad6ec2",
+    "logs": [],
+    "blockNumber": 9163355,
+    "cumulativeGasUsed": "7747317",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "dc413c32ae17d332821d71fa8ed2be2c",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.28+commit.7893614a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"by\",\"type\":\"uint256\"}],\"name\":\"Increment\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"inc\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"by\",\"type\":\"uint256\"}],\"name\":\"incBy\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"x\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/Counter.sol\":\"Counter\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/Counter.sol\":{\"content\":\"// SPDX-License-Identifier: UNLICENSED\\npragma solidity ^0.8.28;\\n\\ncontract Counter {\\n  uint public x;\\n\\n  event Increment(uint by);\\n\\n  function inc() public {\\n    x++;\\n    emit Increment(1);\\n  }\\n\\n  function incBy(uint by) public {\\n    require(by > 0, \\\"incBy: increment should be positive\\\");\\n    x += by;\\n    emit Increment(by);\\n  }\\n}\\n\",\"keccak256\":\"0xd1eddad4c97b4c816095ecb692015834de20526181c985c074b158d66f283749\",\"license\":\"UNLICENSED\"}},\"version\":1}",
+  "bytecode": "0x6080604052348015600f57600080fd5b5061020b8061001f6000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c80630c55699c14610046578063371303c01461006157806370119d061461006b575b600080fd5b61004f60005481565b60405190815260200160405180910390f35b61006961007e565b005b610069610079366004610174565b6100c8565b60008054908061008d836101a3565b9091555050604051600181527f51af157c2eee40f68107a47a49c32fbbeb0a3c9e5cd37aa56e88e6be92368a819060200160405180910390a1565b600081116101285760405162461bcd60e51b815260206004820152602360248201527f696e6342793a20696e6372656d656e742073686f756c6420626520706f73697460448201526269766560e81b606482015260840160405180910390fd5b8060008082825461013991906101bc565b90915550506040518181527f51af157c2eee40f68107a47a49c32fbbeb0a3c9e5cd37aa56e88e6be92368a819060200160405180910390a150565b60006020828403121561018657600080fd5b5035919050565b634e487b7160e01b600052601160045260246000fd5b6000600182016101b5576101b561018d565b5060010190565b808201808211156101cf576101cf61018d565b9291505056fea264697066735822122009d06cce61e577ddded4cd206770ac7aeb524d237db1570f386303b2d401db8c64736f6c634300081c0033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100415760003560e01c80630c55699c14610046578063371303c01461006157806370119d061461006b575b600080fd5b61004f60005481565b60405190815260200160405180910390f35b61006961007e565b005b610069610079366004610174565b6100c8565b60008054908061008d836101a3565b9091555050604051600181527f51af157c2eee40f68107a47a49c32fbbeb0a3c9e5cd37aa56e88e6be92368a819060200160405180910390a1565b600081116101285760405162461bcd60e51b815260206004820152602360248201527f696e6342793a20696e6372656d656e742073686f756c6420626520706f73697460448201526269766560e81b606482015260840160405180910390fd5b8060008082825461013991906101bc565b90915550506040518181527f51af157c2eee40f68107a47a49c32fbbeb0a3c9e5cd37aa56e88e6be92368a819060200160405180910390a150565b60006020828403121561018657600080fd5b5035919050565b634e487b7160e01b600052601160045260246000fd5b6000600182016101b5576101b561018d565b5060010190565b808201808211156101cf576101cf61018d565b9291505056fea264697066735822122009d06cce61e577ddded4cd206770ac7aeb524d237db1570f386303b2d401db8c64736f6c634300081c0033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 1057,
+        "contract": "contracts/Counter.sol:Counter",
+        "label": "x",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_uint256"
+      }
+    ],
+    "types": {
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}
