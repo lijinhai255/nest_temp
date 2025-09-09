@@ -196,7 +196,7 @@ export default function ProfilePage() {
 
         <TabsContent value="edit">
           <div className="bg-white shadow-100 border border-black/10 p-8 rounded-lg">
-            {userData?.walletAddress && (
+            {address && (
               <UserProfileEdit
                 initialData={userData}
                 onSuccess={fetchUserData}
