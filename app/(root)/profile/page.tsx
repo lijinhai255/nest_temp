@@ -198,7 +198,7 @@ export default function ProfilePage() {
           <div className="bg-white shadow-100 border border-black/10 p-8 rounded-lg">
             {address && (
               <UserProfileEdit
-                initialData={userData}
+                initialData={userData || {}}
                 onSuccess={fetchUserData}
                 walletAddress={address}
               />
