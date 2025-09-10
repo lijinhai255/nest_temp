@@ -455,7 +455,6 @@ const AdvancedContractMonitor: React.FC<AdvancedContractMonitorProps> = ({
     []
   );
 
-  // 🔧 核心事件处理器 - 修复状态更新问题
   // 🔧 核心事件处理器 - 修复类型问题
   const processContractEvent = useCallback(
     async (contract: ExtendedContractConfig, log: Log) => {
@@ -830,7 +829,6 @@ const AdvancedContractMonitor: React.FC<AdvancedContractMonitorProps> = ({
     }
   };
 
-  // 继续使用原有的 JSX 渲染部分...
   return (
     <Card className={className}>
       <CardHeader>
@@ -846,11 +844,17 @@ const AdvancedContractMonitor: React.FC<AdvancedContractMonitorProps> = ({
                 size="sm"
                 onClick={startMonitoring}
                 disabled={activeContracts.length === 0}
+                className="text-white"
               >
                 开始监听
               </Button>
             ) : (
-              <Button size="sm" variant="outline" onClick={stopMonitoring}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={stopMonitoring}
+                className="text-white"
+              >
                 停止监听
               </Button>
             )}
