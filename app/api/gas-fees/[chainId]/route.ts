@@ -446,28 +446,69 @@ function calculateGasFeeRecommendations(
     priorityFees.push(1000000000); // 1 Gwei
   }
   
-  const lowPriorityFee = BigInt(getPercentile(priorityFees, 10));  // 10%分位数
-  const mediumPriorityFee = BigInt(getPercentile(priorityFees, 50)); // 50%分位数
-  const highPriorityFee = BigInt(getPercentile(priorityFees, 80));  // 80%分位数
+    /**
+   * 第一步：计算不同优先级的优先费用（小费）
+   * 
+   * 使用百分位数方法从历史交易数据中确定合理的优先费用：
+   * - 低优先级：使用10%分位数，比10%的交易出价更高，经济但确认较慢
+   * - 中等优先级：使用50%分位数（中位数），平衡成本和速度
+   * - 高优先级：使用80%分位数，比大多数交易出价更高，确认更快但成本更高
+   */
+  const lowPriorityFee = BigInt(getPercentile(priorityFees, 10));  // 10%分位数 - 经济选项
+  const mediumPriorityFee = BigInt(getPercentile(priorityFees, 50)); // 50%分位数 - 标准选项（中位数）
+  const highPriorityFee = BigInt(getPercentile(priorityFees, 80));  // 80%分位数 - 快速选项
   
-  // 计算网络拥堵程度
+  /**
+   * 第二步：评估网络拥堵状况
+   * 
+   * 计算当前网络使用率并根据拥堵程度调整参数：
+   * - 高拥堵时增加费用倍数和预估时间
+   * - 低拥堵时降低费用倍数和预估时间
+   */
   const networkUtilization = calculateNetworkUtilization(gasHistory, chainId);
   const congestionParams = calculateCongestionParams(networkUtilization);
   
-  // 计算最大Gas费用 (baseFee的倍数 + 优先费用)
+  /**
+   * 第三步：计算最大Gas费用
+   * 
+   * 公式：maxFee = (baseFee * multiplier / 100) + priorityFee
+   * 
+   * - baseFee：网络当前的基础费用
+   * - multiplier：根据优先级和网络拥堵情况确定的倍数
+   * - priorityFee：给矿工/验证者的小费
+   * 
+   * 不同优先级使用不同的倍数：
+   * - 低优先级：105%-125%的基础费用 + 低优先费
+   * - 中等优先级：110%-140%的基础费用 + 中等优先费
+   * - 高优先级：130%-180%的基础费用 + 高优先费
+   */
   const lowMaxFee = latestBaseFee * BigInt(congestionParams.lowMultiplier) / BigInt(100) + lowPriorityFee;
   const mediumMaxFee = latestBaseFee * BigInt(congestionParams.mediumMultiplier) / BigInt(100) + mediumPriorityFee;
   const highMaxFee = latestBaseFee * BigInt(congestionParams.highMultiplier) / BigInt(100) + highPriorityFee;
   
-  // 根据网络拥堵情况预估确认时间
-  let lowEstimatedBlocks = 5;
-  let mediumEstimatedBlocks = 2;
-  let highEstimatedBlocks = 1;
+  /**
+   * 第四步：预估交易确认时间
+   * 
+   * 首先设定基准区块数：
+   * - 低优先级：预计需要5个区块
+   * - 中等优先级：预计需要2个区块
+   * - 高优先级：预计需要1个区块
+   * 
+   * 然后根据网络拥堵情况调整：
+   * - 高拥堵时：增加预估区块数 (最多增加50%)
+   * - 低拥堵时：减少预估区块数 (最多减少20%)
+   * 
+   * 最后将区块数转换为秒数：区块数 * 平均区块时间
+   */
+  let lowEstimatedBlocks = 5;  // 经济选项基准区块数
+  let mediumEstimatedBlocks = 2;  // 标准选项基准区块数
+  let highEstimatedBlocks = 1;  // 快速选项基准区块数
   
+  // 应用网络拥堵调整因子
   const blockTimeMultiplier = congestionParams.blockTimeMultiplier;
   lowEstimatedBlocks = Math.round(lowEstimatedBlocks * blockTimeMultiplier);
   mediumEstimatedBlocks = Math.round(mediumEstimatedBlocks * blockTimeMultiplier);
-  highEstimatedBlocks = Math.max(1, Math.round(highEstimatedBlocks * blockTimeMultiplier));
+  highEstimatedBlocks = Math.max(1, Math.round(highEstimatedBlocks * blockTimeMultiplier));  // 确保至少为1个区块
   
   return {
     low: {

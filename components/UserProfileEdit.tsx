@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { UserProfileEditProps } from "@/types";
-import { updateAuthor } from "@/lib/db/author";
+import { updateAuthor, createAuthor } from "@/lib/db/author";
 
 // 定义表单数据类型
 type FormData = {
@@ -16,6 +16,13 @@ type FormData = {
   image: string | null;
   bio: string;
 };
+
+// 定义 Supabase 错误类型
+interface SupabaseError extends Error {
+  code?: string;
+  details?: string;
+  hint?: string;
+}
 
 export function UserProfileEdit({
   initialData,
@@ -58,19 +65,61 @@ export function UserProfileEdit({
       const { data, error } = await updateAuthor(walletAddress, formData);
 
       if (error) {
-        toast({
-          title: "更新失败",
-          description: error.message || "个人资料更新失败，请稍后重试",
-          variant: "destructive",
-        });
-        return;
-      }
+        // 将 error 转换为 SupabaseError 类型
+        const supabaseError = error as SupabaseError;
 
-      toast({
-        title: "更新成功",
-        description: "您的个人资料已成功更新",
-        variant: "default",
-      });
+        // 检查错误是否是因为用户不存在
+        if (
+          supabaseError.message?.includes(
+            "Cannot coerce the result to a single JSON object"
+          )
+        ) {
+          // 如果用户不存在，则创建新用户
+          // 创建一个新的对象，将 null 值转换为 undefined
+          const authorData = {
+            walletAddress,
+            name: formData.name,
+            username: formData.username,
+            email: formData.email,
+            bio: formData.bio,
+            // 如果 image 是 null，则设置为 undefined
+            image: formData.image === null ? undefined : formData.image,
+          };
+
+          const { data: newData, error: createError } = await createAuthor(
+            authorData
+          );
+
+          if (createError) {
+            toast({
+              title: "创建失败",
+              description: createError.message || "创建用户失败，请稍后重试",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          toast({
+            title: "创建成功",
+            description: "您的个人资料已成功创建",
+            variant: "default",
+          });
+        } else {
+          // 其他错误
+          toast({
+            title: "更新失败",
+            description: error.message || "个人资料更新失败，请稍后重试",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        toast({
+          title: "更新成功",
+          description: "您的个人资料已成功更新",
+          variant: "default",
+        });
+      }
 
       // 如果提供了成功回调函数，则调用它
       if (onSuccess) {
