@@ -714,6 +714,7 @@ const Wagmi = () => {
                       <Button
                         onClick={handleSignMessage}
                         disabled={isSignPending || !account.address}
+                        className="text-white"
                       >
                         {isSignPending ? "签名中..." : "签名消息"}
                       </Button>
@@ -766,6 +767,7 @@ const Wagmi = () => {
                           !verifyInputSignature ||
                           !account.address
                         }
+                        className="text-white"
                       >
                         {isVerifying ? "验证中..." : "验证签名"}
                       </Button>
@@ -829,6 +831,7 @@ const Wagmi = () => {
                       <Button
                         onClick={checkTokenBalance}
                         disabled={isLoadingTokenBalance || !addressToCheck}
+                        className="text-white"
                       >
                         {isLoadingTokenBalance ? "查询中..." : "查询余额"}
                       </Button>
@@ -942,7 +945,7 @@ const Wagmi = () => {
                       transferStatus === "pending" ||
                       !account.address
                     }
-                    className="w-full"
+                    className="w-full text-white"
                   >
                     {transferStatus === "pending" ? "发送中..." : "发送 ETH"}
                   </Button>
