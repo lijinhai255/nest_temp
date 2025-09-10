@@ -508,7 +508,7 @@ interface ApiErrorResponse {
 }
 
 // 定义API成功响应接口
-interface ApiSuccessResponse extends GasFeeRecommendations {}
+type ApiSuccessResponse = GasFeeRecommendations;
 
 // Next.js API Route处理函数
 export async function GET(
