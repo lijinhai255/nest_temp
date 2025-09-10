@@ -18,9 +18,6 @@ export default function Navbar() {
             <Link href="/ethers" className="text-gray-600">
               <span>ethers</span>
             </Link>
-            <Link href="/ethers" className="text-gray-600">
-              <span>ethers</span>
-            </Link>
             <Link href="/wagmi" className="text-gray-600">
               <span>wagmi</span>
             </Link>
