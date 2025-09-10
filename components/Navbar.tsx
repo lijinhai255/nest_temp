@@ -11,6 +11,13 @@ export default function Navbar() {
         </Link>
         <div className="flex items-center gap-5 text-black">
           <>
+            {/* performance */}
+            <Link href="/performance" className="text-gray-600">
+              <span>performance</span>
+            </Link>
+            <Link href="/ethers" className="text-gray-600">
+              <span>ethers</span>
+            </Link>
             <Link href="/ethers" className="text-gray-600">
               <span>ethers</span>
             </Link>
