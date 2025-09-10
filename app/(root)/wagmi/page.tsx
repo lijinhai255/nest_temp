@@ -24,6 +24,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import PerformanceMonitor from "./components/PerformanceMonitor";
+import ContractPerformanceMonitor, {
+  AbiItem,
+} from "./components/ContractPerformanceMonitor";
+import { ContractMetric, ContractStats } from "@/types";
+import type { Abi } from "viem";
 
 // ERC20 ABI (精简版)
 const erc20ABI = [
@@ -50,7 +56,7 @@ const erc20ABI = [
 const TEST_TOKENS = {
   // Sepolia 测试网
   11155111: {
-    name: "MIK  (Sepolia 测试网)",
+    name: "MIK (Sepolia 测试网)",
     address: "0x29c3A0FD12E14E88B73d6ff796AFEd06BF5e5d13",
     decimals: 6,
   },
@@ -150,6 +156,47 @@ const Wagmi = () => {
     useWaitForTransactionReceipt({
       hash,
     });
+
+  const normalizeAbi = (abi: readonly Record<string, unknown>[]): AbiItem[] => {
+    return abi.map((item) => ({
+      ...item,
+      type: String(item.type || "function") as
+        | "function"
+        | "event"
+        | "constructor"
+        | "fallback"
+        | "receive"
+        | "error",
+    })) as AbiItem[]; // 返回 AbiItem[] 而不是 Abi
+  };
+
+  const monitoredContracts = [
+    {
+      address: counterABI.address as string,
+      name: "Counter Contract",
+      abi: normalizeAbi(counterABI.abi as readonly Record<string, unknown>[]),
+    },
+    ...(TEST_TOKENS[chainId as keyof typeof TEST_TOKENS]
+      ? [
+          {
+            address: TEST_TOKENS[chainId as keyof typeof TEST_TOKENS].address,
+            name: TEST_TOKENS[chainId as keyof typeof TEST_TOKENS].name,
+            abi: [...erc20ABI] as AbiItem[], // 转换为可变数组
+          },
+        ]
+      : []),
+  ];
+
+  // 监控指标回调
+  const handleMetricUpdate = (metric: ContractMetric) => {
+    console.log("📊 新的合约调用记录:", metric);
+    // 可以在这里处理新的指标数据，比如发送到服务器
+  };
+
+  const handleStatsUpdate = (stats: ContractStats) => {
+    console.log("📈 统计数据更新:", stats);
+    // 可以在这里处理统计数据更新，比如更新仪表板
+  };
 
   // 获取当前链上的代币地址
   function getTokenAddressForCurrentChain(): string | undefined {
@@ -280,6 +327,7 @@ const Wagmi = () => {
   }, [verifyData, verifyError, account.address]);
 
   const handleIncrement = () => {
+    console.log("🚀 触发递增操作，合约地址:", counterABI.address);
     writeContract({
       address: counterABI.address as `0x${string}`,
       abi: counterABI.abi,
@@ -301,6 +349,12 @@ const Wagmi = () => {
       return;
     }
 
+    console.log(
+      "🚀 触发自定义递增操作，合约地址:",
+      counterABI.address,
+      "增加值:",
+      incrementAmount
+    );
     writeContract({
       address: counterABI.address as `0x${string}`,
       abi: counterABI.abi,
@@ -384,13 +438,11 @@ const Wagmi = () => {
         args: [addressToCheck as `0x${string}`],
       });
 
-      // 修复类型错误：确保 balance 是 bigint 类型
       if (typeof balance === "bigint") {
         const decimals =
           TEST_TOKENS[chainId as keyof typeof TEST_TOKENS]?.decimals || 18;
         setTokenBalance(formatUnits(balance, decimals));
       } else {
-        // 如果不是 bigint，尝试转换
         const decimals =
           TEST_TOKENS[chainId as keyof typeof TEST_TOKENS]?.decimals || 18;
         setTokenBalance(formatUnits(BigInt(String(balance)), decimals));
@@ -573,6 +625,7 @@ const Wagmi = () => {
                     <Button
                       onClick={handleIncrement}
                       disabled={isPendingWrite || isConfirming}
+                      className="text-white"
                     >
                       {isPendingWrite || isConfirming
                         ? "处理中..."
@@ -826,17 +879,22 @@ const Wagmi = () => {
                               )}...${event.to.slice(-4)}`}</span>
                             </p>
                             <p>
-                              <span className="font-medium">金额:</span>{" "}
-                              {event.value} {getTokenNameForCurrentChain()}
+                              <span className="font-medium">数量:</span>{" "}
+                              <span className="font-semibold">
+                                {event.value}
+                              </span>
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              区块: {event.blockNumber}
+                            <p>
+                              <span className="font-medium">区块:</span>{" "}
+                              <span className="text-gray-600">
+                                {event.blockNumber}
+                              </span>
                             </p>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-500">暂无转账事件</p>
+                      <p className="text-gray-500 text-sm">暂无转账事件记录</p>
                     )}
                   </div>
                 </div>
@@ -848,7 +906,7 @@ const Wagmi = () => {
           <TabsContent value="transfer">
             <Card>
               <CardHeader>
-                <CardTitle>发送ETH</CardTitle>
+                <CardTitle>发送 ETH 转账</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
@@ -858,66 +916,68 @@ const Wagmi = () => {
                       id="recipientAddress"
                       value={recipientAddress}
                       onChange={(e) => setRecipientAddress(e.target.value)}
-                      placeholder="输入接收ETH的地址"
+                      placeholder="输入接收者的以太坊地址"
                       className="mt-1"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="transferAmount">金额 (ETH)</Label>
+                    <Label htmlFor="transferAmount">转账金额 (ETH)</Label>
                     <Input
                       id="transferAmount"
                       type="number"
+                      step="0.001"
                       value={transferAmount}
                       onChange={(e) => setTransferAmount(e.target.value)}
-                      placeholder="输入要发送的ETH数量"
+                      placeholder="输入转账金额"
                       className="mt-1"
-                      step="0.001"
-                      min="0"
                     />
-                    {ethBalance && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        可用余额: {formatEther(ethBalance.value)} ETH
-                      </p>
-                    )}
                   </div>
 
                   <Button
                     onClick={sendEth}
                     disabled={
-                      transferStatus === "pending" ||
                       !recipientAddress ||
                       !transferAmount ||
+                      transferStatus === "pending" ||
                       !account.address
                     }
                     className="w-full"
                   >
-                    {transferStatus === "pending" ? "发送中..." : "发送ETH"}
+                    {transferStatus === "pending" ? "发送中..." : "发送 ETH"}
                   </Button>
 
                   {transferHash && (
-                    <div className="p-4 bg-white-100 rounded-md border border-black-100">
-                      <h3 className="font-medium mb-2 text-black-200">
-                        交易状态
+                    <div className="p-4 bg-gray-50 rounded-md border border-gray-200">
+                      <h3 className="font-medium mb-2 text-gray-800">
+                        转账状态
                       </h3>
-                      <p className="text-sm">
-                        交易哈希:{" "}
-                        <span className="font-mono text-xs break-all">
-                          {transferHash}
-                        </span>
-                      </p>
-                      <p className="text-sm mt-2">
-                        状态:{" "}
-                        {transferStatus === "pending" ? (
-                          <span className="text-yellow-600">处理中...</span>
-                        ) : transferStatus === "submitted" ? (
-                          <span className="text-blue-600">已提交</span>
-                        ) : transferStatus === "confirmed" ? (
-                          <span className="text-green-600">已确认</span>
-                        ) : (
-                          <span className="text-red-600">失败</span>
-                        )}
-                      </p>
+                      <div className="space-y-2 text-sm">
+                        <p>
+                          <span className="text-gray-600">交易哈希:</span>
+                          <br />
+                          <span className="font-mono text-xs break-all">
+                            {transferHash}
+                          </span>
+                        </p>
+                        <p>
+                          <span className="text-gray-600">状态:</span>{" "}
+                          <span
+                            className={`font-medium ${
+                              transferStatus === "confirmed"
+                                ? "text-green-600"
+                                : transferStatus === "failed"
+                                ? "text-red-600"
+                                : "text-yellow-600"
+                            }`}
+                          >
+                            {transferStatus === "pending" && "处理中..."}
+                            {transferStatus === "submitted" && "已提交"}
+                            {transferStatus === "confirmed" && "已确认"}
+                            {transferStatus === "failed" && "失败"}
+                          </span>
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -926,24 +986,19 @@ const Wagmi = () => {
           </TabsContent>
         </Tabs>
 
-        {/* 合约信息 */}
-        <div className="mt-8 text-sm text-black-300">
-          <p>
-            Counter合约地址:{" "}
-            <span className="font-mono">{counterABI.address}</span>
-          </p>
-          {TEST_TOKENS[chainId as keyof typeof TEST_TOKENS] && (
-            <p>
-              {getTokenNameForCurrentChain()}地址:{" "}
-              <span className="font-mono">
-                {getTokenAddressForCurrentChain()}
-              </span>
-            </p>
-          )}
-        </div>
+        {/* 性能监控组件 */}
+        <PerformanceMonitor />
+
+        {/* 🔧 修复：正确传递合约配置给监控组件 */}
+        <ContractPerformanceMonitor
+          contracts={monitoredContracts}
+          maxRecords={100}
+          className="mt-6"
+        />
       </div>
     </div>
   );
 };
 
 export default Wagmi;
+

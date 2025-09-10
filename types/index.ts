@@ -15,4 +15,38 @@ export interface UserProfileEditProps {
   walletAddress?: string;
 }
 
-// 删除错误的 FormDataType 定义
+// JSON-RPC 请求类型
+export interface JsonRpcRequest {
+  id?: string | number;
+  jsonrpc?: string;
+  method: string;
+  params?: unknown[];
+}
+
+
+// 定义合约调用性能指标类型
+export interface ContractMetric {
+  id: string;
+  userId: string;
+  contractAddress: string;
+  contractName?: string;
+  functionName: string;
+  functionArgs?: readonly unknown[];
+  startTimestamp: number;
+  endTimestamp: number;
+  duration: number;
+  gasUsed?: bigint;
+  status: "success" | "error";
+  transactionHash?: string;
+  error?: string;
+}
+
+// 定义合约调用性能统计类型
+export interface ContractStats {
+  avgExecutionTime: number;
+  minExecutionTime: number;
+  maxExecutionTime: number;
+  avgGasUsed: string;
+  successRate: number;
+  totalCalls: number;
+}
