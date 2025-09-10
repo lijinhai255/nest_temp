@@ -6,14 +6,23 @@ import { useEthersSigner } from "@/hooks/useEthersSigner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import GasFeeSelector from "@/components/GasFeeSelector";
 
 export default function CounterPage() {
   const [count, setCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const signer = useEthersSigner({ chainId: 11155111 }); // Sepolia chainId
   const counterContract = useCounterContract(signer);
+
+  // 添加Gas费用状态
+  const [maxFeePerGas, setMaxFeePerGas] = useState<bigint>(BigInt(0));
+  const [maxPriorityFeePerGas, setMaxPriorityFeePerGas] = useState<bigint>(
+    BigInt(0)
+  );
+
   console.log("signer", signer);
   console.log("counterContract", counterContract);
+
   // 获取当前计数
   const fetchCount = async () => {
     try {
@@ -24,13 +33,28 @@ export default function CounterPage() {
     }
   };
 
+  // 处理Gas费用选择
+  const handleGasFeeSelect = (fee: bigint, priorityFee: bigint) => {
+    setMaxFeePerGas(fee);
+    setMaxPriorityFeePerGas(priorityFee);
+    console.log("已选择Gas费用:", {
+      maxFeePerGas: fee.toString(),
+      maxPriorityFeePerGas: priorityFee.toString(),
+    });
+  };
+
   // 增加计数
   const handleIncrement = async () => {
     if (!signer) return;
 
     setLoading(true);
     try {
-      const tx = await counterContract.inc();
+      // 使用选择的Gas费用
+      const tx = await counterContract.inc({
+        maxFeePerGas: maxFeePerGas > 0 ? maxFeePerGas : undefined,
+        maxPriorityFeePerGas:
+          maxPriorityFeePerGas > 0 ? maxPriorityFeePerGas : undefined,
+      });
       await tx.wait();
       await fetchCount();
     } catch (error) {
@@ -46,7 +70,12 @@ export default function CounterPage() {
 
     setLoading(true);
     try {
-      const tx = await counterContract.incBy(3); // 增加3
+      // 使用选择的Gas费用
+      const tx = await counterContract.incBy(3, {
+        maxFeePerGas: maxFeePerGas > 0 ? maxFeePerGas : undefined,
+        maxPriorityFeePerGas:
+          maxPriorityFeePerGas > 0 ? maxPriorityFeePerGas : undefined,
+      });
       await tx.wait();
       await fetchCount();
     } catch (error) {
@@ -93,6 +122,13 @@ export default function CounterPage() {
             </div>
 
             <Separator className="border-dashed border-gray-300 my-6" />
+
+            {/* Gas费用选择器 */}
+            {signer && (
+              <div className="mb-6">
+                <GasFeeSelector onSelectGasFee={handleGasFeeSelect} />
+              </div>
+            )}
 
             {/* 按钮区域 */}
             <div className="grid grid-cols-2 gap-6">
