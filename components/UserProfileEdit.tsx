@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { UserProfileEditProps } from "@/types";
 import { updateAuthor, createAuthor } from "@/lib/db/author";
+import useSWRMutation from "swr/mutation";
+import { useCallback } from "react";
+
+// 扩展UserProfileEditProps类型，添加isNewUser属性
+interface ExtendedUserProfileProps extends UserProfileEditProps {
+  isNewUser?: boolean;
+}
 
 // 定义表单数据类型
 type FormData = {
@@ -17,125 +24,198 @@ type FormData = {
   bio: string;
 };
 
-// 定义 Supabase 错误类型
-interface SupabaseError extends Error {
+// 定义API错误类型
+interface ApiError {
+  message?: string;
   code?: string;
-  details?: string;
-  hint?: string;
+}
+
+// 定义用于更新作者的参数类型
+type UpdateAuthorArgs = {
+  walletAddress: string;
+  authorData: {
+    walletAddress: string;
+    name: string;
+    username: string;
+    email?: string;
+    bio?: string;
+    image?: string;
+  };
+};
+
+// 使用SWR Mutation的更新函数
+async function updateAuthorFetcher(
+  key: string,
+  { arg }: { arg: UpdateAuthorArgs }
+) {
+  const { walletAddress, authorData } = arg;
+  const result = await updateAuthor(walletAddress, authorData);
+
+  if (result.error) {
+    // 创建一个Error对象并添加code属性
+    const error = new Error(result.error.message || "更新失败");
+    (error as unknown as ApiError).code = result.error.code;
+    throw error;
+  }
+
+  return result.data;
+}
+
+// 使用SWR Mutation的创建函数
+async function createAuthorFetcher(
+  key: string,
+  { arg }: { arg: UpdateAuthorArgs["authorData"] }
+) {
+  const result = await createAuthor(arg);
+
+  if (result.error) {
+    // 创建一个Error对象并添加code属性
+    const error = new Error(result.error.message || "创建失败");
+    (error as unknown as ApiError).code = result.error.code;
+    throw error;
+  }
+
+  return result.data;
 }
 
 export function UserProfileEdit({
   initialData,
   onSuccess,
   walletAddress,
-}: UserProfileEditProps) {
+  isNewUser = false, // 添加isNewUser属性，默认为false
+}: ExtendedUserProfileProps) {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    name: initialData.name || "",
-    username: initialData.username || "",
-    email: initialData.email || "",
-    image: initialData.image || null,
-    bio: initialData.bio || "",
+    name: initialData?.name || "",
+    username: initialData?.username || "",
+    email: initialData?.email || "",
+    image: initialData?.image || null,
+    bio: initialData?.bio || "",
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
+  // 使用SWR Mutation来处理更新操作
+  const { trigger: triggerUpdate, isMutating: isUpdating } = useSWRMutation(
+    "updateAuthor",
+    updateAuthorFetcher
+  );
 
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  // 使用SWR Mutation来处理创建操作
+  const { trigger: triggerCreate, isMutating: isCreating } = useSWRMutation(
+    "createAuthor",
+    createAuthorFetcher
+  );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // 阻止表单默认提交行为
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    },
+    []
+  );
 
-    if (!walletAddress) {
-      toast({
-        title: "错误",
-        description: "未找到钱包地址，无法更新个人资料",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    try {
-      setIsLoading(true);
-      // 根据钱包地址 walletAddress 更新数据
-      const { data, error } = await updateAuthor(walletAddress, formData);
-
-      if (error) {
-        // 将 error 转换为 SupabaseError 类型
-        const supabaseError = error as SupabaseError;
-
-        // 检查错误是否是因为用户不存在
-        if (
-          supabaseError.message?.includes(
-            "Cannot coerce the result to a single JSON object"
-          )
-        ) {
-          // 如果用户不存在，则创建新用户
-          // 创建一个新的对象，将 null 值转换为 undefined
-          const authorData = {
-            walletAddress,
-            name: formData.name,
-            username: formData.username,
-            email: formData.email,
-            bio: formData.bio,
-            // 如果 image 是 null，则设置为 undefined
-            image: formData.image === null ? undefined : formData.image,
-          };
-
-          const { data: newData, error: createError } = await createAuthor(
-            authorData
-          );
-
-          if (createError) {
-            toast({
-              title: "创建失败",
-              description: createError.message || "创建用户失败，请稍后重试",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          toast({
-            title: "创建成功",
-            description: "您的个人资料已成功创建",
-            variant: "default",
-          });
-        } else {
-          // 其他错误
-          toast({
-            title: "更新失败",
-            description: error.message || "个人资料更新失败，请稍后重试",
-            variant: "destructive",
-          });
-          return;
-        }
-      } else {
+      if (!walletAddress) {
         toast({
-          title: "更新成功",
-          description: "您的个人资料已成功更新",
+          title: "错误",
+          description: "未找到钱包地址，无法更新个人资料",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      // 准备要发送的数据
+      const authorData = {
+        walletAddress,
+        name: formData.name,
+        username: formData.username,
+        email: formData.email,
+        bio: formData.bio,
+        image:
+          !formData.image || formData.image === "" ? undefined : formData.image,
+      };
+
+      console.log("提交的用户数据:", authorData);
+
+      let isSuccess = false;
+      let operationIsCreate = isNewUser; // 根据isNewUser决定初始操作类型
+
+      try {
+        // 如果是新用户，直接尝试创建
+        if (isNewUser) {
+          console.log("新用户，尝试创建...");
+          await triggerCreate(authorData);
+          isSuccess = true;
+        } else {
+          // 如果是现有用户，先尝试更新
+          console.log("尝试更新用户...");
+          try {
+            await triggerUpdate({ walletAddress, authorData });
+            isSuccess = true;
+          } catch (error) {
+            const apiError = error as unknown as ApiError;
+
+            // 如果是因为用户不存在导致的更新失败，尝试创建用户
+            if (apiError.code === "PGRST116") {
+              console.log("用户不存在，尝试创建...");
+
+              await triggerCreate(authorData);
+              isSuccess = true;
+              operationIsCreate = true;
+            } else {
+              // 其他更新错误，尝试创建用户
+              console.log("更新失败，尝试创建...");
+
+              await triggerCreate(authorData);
+              isSuccess = true;
+              operationIsCreate = true;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("操作失败:", error);
+        const err = error as Error;
+
+        toast({
+          title: operationIsCreate ? "创建失败" : "更新失败",
+          description: err.message || "操作失败，请稍后重试",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+
+      // 处理成功情况
+      if (isSuccess) {
+        toast({
+          title: operationIsCreate ? "创建成功" : "更新成功",
+          description: operationIsCreate
+            ? "您的个人资料已成功创建"
+            : "您的个人资料已成功更新",
           variant: "default",
         });
-      }
 
-      // 如果提供了成功回调函数，则调用它
-      if (onSuccess) {
-        onSuccess();
+        if (onSuccess) onSuccess();
       }
-    } catch (err) {
-      console.error("更新个人资料时出错:", err);
-      toast({
-        title: "更新失败",
-        description: "发生未知错误，请稍后重试",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [
+      formData,
+      walletAddress,
+      toast,
+      onSuccess,
+      triggerUpdate,
+      triggerCreate,
+      isNewUser,
+    ]
+  );
+
+  // 计算加载状态
+  const isLoading = isSubmitting || isUpdating || isCreating;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -150,6 +230,7 @@ export function UserProfileEdit({
           onChange={handleChange}
           placeholder="您的名称"
           disabled={isLoading}
+          required={isNewUser} // 如果是新用户，名称是必填的
         />
       </div>
 
@@ -164,6 +245,7 @@ export function UserProfileEdit({
           onChange={handleChange}
           placeholder="用户名"
           disabled={isLoading}
+          required={isNewUser} // 如果是新用户，用户名是必填的
         />
       </div>
 
@@ -211,15 +293,12 @@ export function UserProfileEdit({
         />
       </div>
 
-      {/* 隐藏的钱包地址字段 */}
-      <input type="hidden" name="walletAddress" value={walletAddress} />
-
       <Button
         type="submit"
         disabled={isLoading}
-        className="bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-md shadow-100 hover:shadow-200 transition-all"
+        className="bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-md shadow-100 hover:shadow-200 transition-all w-full"
       >
-        {isLoading ? "更新中..." : "保存更改"}
+        {isLoading ? "处理中..." : isNewUser ? "创建资料" : "保存资料"}
       </Button>
     </form>
   );
