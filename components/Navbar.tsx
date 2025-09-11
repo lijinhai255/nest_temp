@@ -11,7 +11,9 @@ export default function Navbar() {
         </Link>
         <div className="flex items-center gap-5 text-black">
           <>
-            {/* performance */}
+            <Link href="/nft" className="text-gray-600">
+              <span>nft</span>
+            </Link>
             <Link href="/performance" className="text-gray-600">
               <span>performance</span>
             </Link>

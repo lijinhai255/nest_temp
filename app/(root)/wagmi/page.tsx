@@ -19,6 +19,7 @@ import { parseEther, formatEther, formatUnits } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import counterABI from "@/lib/abi/Counter.json";
+import CryptoMonkeys from "@/lib/abi/CryptoMonkeys.json";
 import { toast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,7 +30,6 @@ import ContractPerformanceMonitor, {
   AbiItem,
 } from "./components/ContractPerformanceMonitor";
 import { ContractMetric, ContractStats } from "@/types";
-import type { Abi } from "viem";
 
 // ERC20 ABI (精简版)
 const erc20ABI = [
@@ -176,6 +176,13 @@ const Wagmi = () => {
       name: "Counter Contract",
       abi: normalizeAbi(counterABI.abi as readonly Record<string, unknown>[]),
     },
+    {
+      address: CryptoMonkeys.address as string,
+      name: "CryptoMonkeys NFT",
+      abi: normalizeAbi(
+        CryptoMonkeys.abi as readonly Record<string, unknown>[]
+      ),
+    },
     ...(TEST_TOKENS[chainId as keyof typeof TEST_TOKENS]
       ? [
           {
@@ -186,17 +193,6 @@ const Wagmi = () => {
         ]
       : []),
   ];
-
-  // 监控指标回调
-  const handleMetricUpdate = (metric: ContractMetric) => {
-    console.log("📊 新的合约调用记录:", metric);
-    // 可以在这里处理新的指标数据，比如发送到服务器
-  };
-
-  const handleStatsUpdate = (stats: ContractStats) => {
-    console.log("📈 统计数据更新:", stats);
-    // 可以在这里处理统计数据更新，比如更新仪表板
-  };
 
   // 获取当前链上的代币地址
   function getTokenAddressForCurrentChain(): string | undefined {
