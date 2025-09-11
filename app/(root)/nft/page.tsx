@@ -300,13 +300,15 @@ const NFT = () => {
         }
 
         // 获取用户余额
+        // 获取用户余额
         const balance = await retryOperation<bigint>(async () => {
-          return await publicClient.readContract({
+          const result = await publicClient.readContract({
             address: CryptoMonkeysABI.address as `0x${string}`,
             abi: CryptoMonkeysABI.abi,
             functionName: "balanceOf",
             args: [address],
           });
+          return result as bigint; // 明确类型断言
         });
 
         if (!mountedRef.current) return;
@@ -340,7 +342,7 @@ const NFT = () => {
                 functionName: "tokenOfOwnerByIndex",
                 args: [address, BigInt(i)],
               });
-              return tokenId;
+              return tokenId as bigint; // 添加这行
             } catch (err) {
               console.error(`获取代币ID ${i} 时出错:`, err);
               return null;
