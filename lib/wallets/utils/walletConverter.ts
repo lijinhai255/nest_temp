@@ -26,6 +26,11 @@ export class WalletConverter {
           return { accounts };
         },
         provider: wallet.provider,
+      disconnect: async () => {
+        if (wallet.provider && wallet.provider.isConnected) {
+          await wallet.provider.isConnected();
+        }
+      },
       }),
     };
   }

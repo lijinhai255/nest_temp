@@ -31,6 +31,7 @@ export interface WalletConnectResult {
   accounts: string[];
   chainId?: number; // 🔧 明确指定为 number 类型
   networkVersion?: string;
+  provider?:EthereumProvider
 }
 // 🔧 定义链信息类型
 export interface ChainInfo {
@@ -112,6 +113,7 @@ export interface DetectedWallet {
   rdns: string;
   provider: EthereumProvider;
   installed: boolean;
+  type?:"eip6963" | "legacy" | "walletconnect" | undefined;
   createConnector?: () => WalletConnector; // 添加这个属性
 }
 
