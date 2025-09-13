@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { RainbowKitProvider } from "@/components/providers/RainbowKitProvider";
 
 import "./globals.css";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -16,7 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <RainbowKitProvider>{children}</RainbowKitProvider>
+        <ThemeProvider>
+          <RainbowKitProvider>{children}</RainbowKitProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -46,6 +46,7 @@ const config = {
 				"destructive-foreground": "hsl(var(--destructive-foreground) / <alpha-value>)",
 				input: "hsl(var(--input) / <alpha-value>)",
 				ring: "hsl(var(--ring) / <alpha-value>)",
+				"primary-foreground": "hsl(var(--primary-foreground) / <alpha-value>)",
 			},
 			fontFamily: {
 				"work-sans": ["var(--font-work-sans)"],

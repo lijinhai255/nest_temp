@@ -170,7 +170,7 @@ export function WalletConnect() {
               }
 
               return (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <Button
                     onClick={openChainModal}
                     type="button"
