@@ -189,7 +189,7 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
     try {
       // 1. 首先尝试从检测到的钱包中连接
       const detectedWallet = detectedWallets.find((w) => w.id === walletId);
-
+      console.log("detectedWallet", detectedWallet);
       if (detectedWallet) {
         console.log("📱 使用检测到的钱包连接:", detectedWallet.name);
         const result = await walletManager.connectWallet(walletId);

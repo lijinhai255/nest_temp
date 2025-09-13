@@ -20,15 +20,18 @@ gasLimit?:string
 
 // 以太坊提供者接口
 export interface EthereumProvider {
-request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-on?: (event: string, handler: (...args: unknown[]) => void) => void;
-removeListener?: (event: string, handler: (...args: unknown[]) => void) => void;
-isMetaMask?: boolean;
-isOkxWallet?: boolean;
-isCoinbaseWallet?: boolean;
-[key: string]: unknown;
+  request(args: { method: string; params?: unknown[] }): Promise<unknown>;
+  on?(event: string, handler: (...args: unknown[]) => void): void;
+  removeListener?(event: string, handler: (...args: unknown[]) => void): void;
+  isConnected?(): boolean;
 }
 
+// 🔧 修复连接器返回类型
+export interface WalletConnectResult {
+  accounts: string[];
+  chainId?: number; // 🔧 明确指定为 number 类型
+  networkVersion?: string;
+}
 // 🔧 定义链信息类型
 export interface ChainInfo {
 id: number;
@@ -66,13 +69,13 @@ sendTransaction?: (transaction: TransactionRequest) => Promise<unknown>;
 }
 
 // 钱包连接器接口
+
 export interface WalletConnector {
-connect: () => Promise<{ accounts: string[] }>;
-disconnect?: () => Promise<void>;
-provider: EthereumProvider;
-getChainId?: () => Promise<number>;
-switchChain?: (chainId: number) => Promise<void>;
+  provider: EthereumProvider;
+  connect(): Promise<WalletConnectResult>; // 🔧 确保返回 WalletConnectResult
+  disconnect(): Promise<void>;
 }
+
 
 // 钱包信息接口
 export interface WalletInfo {
@@ -102,15 +105,14 @@ detectionType?: 'eip6963' | 'legacy' | 'walletconnect';
 provider?: EthereumProvider;
 }
 
-// 检测到的钱包类型
 export interface DetectedWallet {
-id: string;
-name: string;
-rdns: string;
-icon?: string;
-provider: EthereumProvider;
-installed: boolean;
-type: 'eip6963' | 'legacy';
+  id: string;
+  name: string;
+  icon: string;
+  rdns: string;
+  provider: EthereumProvider;
+  installed: boolean;
+  createConnector?: () => WalletConnector; // 添加这个属性
 }
 
 // 钱包连接结果

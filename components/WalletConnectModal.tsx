@@ -55,52 +55,55 @@ const WalletListComponent = ({
           <div key={groupName}>
             <h3 className="font-medium mb-2 text-foreground">{groupName}</h3>
             <div className="space-y-2">
-              {wallets?.map((walletInstance) => (
-                <div
-                  key={walletInstance.id}
-                  onClick={() => onSelectWallet(walletInstance.id)}
-                  className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-accent cursor-pointer"
-                >
-                  <div className="flex flex-col w-full">
-                    <div className="flex items-center">
-                      <div
-                        className="w-8 h-8 mr-2 rounded-full flex items-center justify-center"
-                        style={{
-                          backgroundColor: walletInstance.iconBackground,
-                        }}
-                      >
-                        {walletInstance.iconUrlResolved ? (
-                          <Image
-                            src={walletInstance.iconUrlResolved}
-                            alt={walletInstance.name}
-                            className="w-6 h-6"
-                            width={50}
-                            height={50}
-                          />
-                        ) : (
-                          <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
-                        )}
-                      </div>
-                      <span className="text-foreground">
-                        {walletInstance.name}
-                      </span>
-                      {!isGridLayout && walletInstance.downloaded === false && (
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          已检测
+              {Array.isArray(wallets) &&
+                wallets?.map((walletInstance) => (
+                  <div
+                    key={walletInstance.id}
+                    onClick={() => onSelectWallet(walletInstance.id)}
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-accent cursor-pointer"
+                  >
+                    <div className="flex flex-col w-full">
+                      <div className="flex items-center">
+                        <div
+                          className="w-8 h-8 mr-2 rounded-full flex items-center justify-center"
+                          style={{
+                            backgroundColor: walletInstance.iconBackground,
+                          }}
+                        >
+                          {walletInstance.iconUrlResolved ? (
+                            <Image
+                              src={walletInstance.iconUrlResolved}
+                              alt={walletInstance.name}
+                              className="w-6 h-6"
+                              width={50}
+                              height={50}
+                            />
+                          ) : (
+                            <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+                          )}
+                        </div>
+                        <span className="text-foreground">
+                          {walletInstance.name}
                         </span>
+                        {!isGridLayout &&
+                          walletInstance.downloaded === false && (
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              已检测
+                            </span>
+                          )}
+                      </div>
+                      {!isGridLayout && (
+                        <div className="text-xs text-muted-foreground mt-1 ml-10">
+                          {walletInstance.description ||
+                            `适用于 ${
+                              walletInstance.platforms ||
+                              "iOS、Android 和 Chrome"
+                            }`}
+                        </div>
                       )}
                     </div>
-                    {!isGridLayout && (
-                      <div className="text-xs text-muted-foreground mt-1 ml-10">
-                        {walletInstance.description ||
-                          `适用于 ${
-                            walletInstance.platforms || "iOS、Android 和 Chrome"
-                          }`}
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         ))}

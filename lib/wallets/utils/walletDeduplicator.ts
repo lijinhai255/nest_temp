@@ -13,25 +13,34 @@ export class WalletDeduplicator {
    * @returns 去重后的结果
    */
   static deduplicate(
-    detected: DetectedWallet[],
-    configuredWallets: { [groupName: string]: ExtendedWallet[] }
+    detected: DetectedWallet[] | undefined,
+    configuredWallets: { [groupName: string]: ExtendedWallet[] } | undefined
   ): DeduplicationResult {
-    console.log("🔍 开始钱包去重...");
+    console.log("🔍 开始钱包去重...", detected, configuredWallets);
+    
+    // 确保 detected 和 configuredWallets 是有效的
+    const safeDetected = detected || [];
+    const safeConfigured = configuredWallets || {};
+    
     console.log(
       "检测到的钱包:",
-      detected.map((w) => ({ name: w.name, id: w.id, rdns: w.rdns }))
+      safeDetected.length > 0 
+        ? safeDetected.map((w) => ({ name: w.name, id: w.id, rdns: w.rdns }))
+        : "没有检测到钱包"
     );
 
     const nameMap = new Map<string, DetectedWallet>();
     const rdnsMap = new Map<string, DetectedWallet>();
 
     // 优先保留 EIP-6963 标准的钱包
-    const sortedDetected = [...detected].sort((a, b) => {
+    const sortedDetected = [...safeDetected].sort((a, b) => {
       if (a.type === "eip6963" && b.type !== "eip6963") return -1;
       if (b.type === "eip6963" && a.type !== "eip6963") return 1;
       return 0;
     });
 
+    console.log("deduplicateDetectedWallets", sortedDetected, nameMap, rdnsMap);
+    
     // 去重检测到的钱包
     const filteredDetected = this.deduplicateDetectedWallets(
       sortedDetected,
@@ -41,7 +50,7 @@ export class WalletDeduplicator {
 
     // 过滤配置的钱包
     const staticFiltered = this.filterConfiguredWallets(
-      configuredWallets,
+      safeConfigured,
       filteredDetected
     );
 
@@ -61,6 +70,17 @@ export class WalletDeduplicator {
     rdnsMap: Map<string, DetectedWallet>
   ): DetectedWallet[] {
     const filteredDetected: DetectedWallet[] = [];
+    
+    // 确保 sortedDetected 是数组且不为空
+    if (!Array.isArray(sortedDetected)) {
+      console.warn("⚠️ sortedDetected 不是数组，返回空结果");
+      return filteredDetected;
+    }
+    
+    if (sortedDetected.length === 0) {
+      console.log("⚠️ 没有检测到钱包，返回空结果");
+      return filteredDetected;
+    }
 
     for (const wallet of sortedDetected) {
       const normalizedName = wallet.name.toLowerCase().trim();
@@ -111,6 +131,13 @@ export class WalletDeduplicator {
     detectedWallets: DetectedWallet[]
   ): { [groupName: string]: ExtendedWallet[] } {
     const staticFiltered: { [groupName: string]: ExtendedWallet[] } = {};
+    
+    // 如果没有检测到钱包，直接返回原始配置
+    if (detectedWallets.length === 0) {
+      console.log("⚠️ 没有检测到钱包，返回原始配置钱包");
+      return configuredWallets;
+    }
+    
     const detectedNames = new Set(
       detectedWallets.map((w) => w.name.toLowerCase().trim())
     );
