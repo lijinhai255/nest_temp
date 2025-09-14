@@ -1,4 +1,4 @@
-// lib/walletManager.ts - 修复实现
+// lib/walletManager.ts - 修复类型安全
 import { DetectedWallet, EthereumProvider, ExtendedWallet, WalletConnectionResult, WalletConnector, WalletConnectResult } from '@/types/provider';
 import { SignerFactory } from './wallets/utils/signerFactory';
 
@@ -24,6 +24,11 @@ interface WalletProvider extends EthereumProvider {
   isCoinbaseWallet?: boolean;
   isRabby?: boolean;
   isTrust?: boolean;
+}
+
+// 🔧 定义带有断开连接方法的 Provider 接口
+interface DisconnectableProvider extends EthereumProvider {
+  disconnect?: () => Promise<void>;
 }
 
 declare global {
@@ -109,6 +114,62 @@ export class WalletManager {
       console.error(`❌ 连接钱包 ${wallet.name} 失败:`, error);
       throw new Error(`连接钱包失败: ${errorMessage}`);
     }
+  }
+
+  /**
+   * 断开指定钱包的连接
+   * @param walletId 钱包ID
+   */
+  public async disconnectWallet(walletId: string): Promise<void> {
+    console.log(`🔌 WalletManager 断开钱包: ${walletId}`);
+    
+    if (!walletId) {
+      console.warn("⚠️ 钱包ID为空，跳过断开连接");
+      return;
+    }
+
+    const wallet = this.getWalletById(walletId);
+    if (!wallet) {
+      console.warn(`⚠️ 钱包 ${walletId} 未找到，跳过断开连接`);
+      return;
+    }
+
+    if (!wallet.createConnector) {
+      console.warn(`⚠️ 钱包 ${wallet.name} 缺少连接器，跳过断开连接`);
+      return;
+    }
+
+    try {
+      const connector = wallet.createConnector();
+      console.log("createConnector:",connector)
+      if (connector.disconnect) {
+        await connector.disconnect();
+        console.log(`✅ 钱包 ${wallet.name} 断开连接成功`);
+      } else {
+        console.log(`ℹ️ 钱包 ${wallet.name} 不支持程序化断开连接`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      console.error(`❌ 断开钱包 ${wallet.name} 失败:`, error);
+      // 不抛出错误，允许清理流程继续
+    }
+  }
+
+  /**
+   * 断开所有钱包连接
+   */
+  public async disconnectAll(): Promise<void> {
+    console.log("🔌 WalletManager 断开所有钱包连接");
+    
+    const wallets = this.getWallets();
+    const disconnectPromises = wallets.map(wallet => 
+      this.disconnectWallet(wallet.id).catch(error => {
+        console.warn(`断开钱包 ${wallet.name} 时出错:`, error);
+      })
+    );
+
+    await Promise.allSettled(disconnectPromises);
+    console.log("✅ 所有钱包断开连接完成");
   }
 
   private async getChainIdSafe(provider: EthereumProvider): Promise<number | undefined> {
@@ -265,14 +326,14 @@ export class WalletManager {
     this.wallets.set(wallet.id, wallet);
   }
 
-  // 🔧 修复连接器实现 - 返回正确的类型
+  // 🔧 修复连接器实现 - 完全移除 any 类型
   private createStandardConnector(provider: EthereumProvider, walletName: string): WalletConnector {
     console.log(`🔌 为 ${walletName} 创建标准连接器`);
     
     const connector: WalletConnector = {
       provider,
       
-      connect: async (): Promise<WalletConnectResult> => { // 🔧 返回 WalletConnectResult
+      connect: async (): Promise<WalletConnectResult> => {
         console.log(`🔄 ${walletName} 连接中...`);
         try {
           const accounts = await provider.request({
@@ -298,7 +359,7 @@ export class WalletManager {
           // 🔧 返回符合 WalletConnectResult 接口的对象
           const result: WalletConnectResult = {
             accounts: accountsArray,
-            chainId, // 🔧 现在是 number | undefined 类型
+            chainId,
           };
           
           return result;
@@ -310,8 +371,23 @@ export class WalletManager {
         }
       },
       
+      // 🔧 类型安全的断开连接方法
       disconnect: async (): Promise<void> => {
-        console.log(`${walletName} 需要用户手动断开连接`);
+        console.log(`🔌 ${walletName} 连接器断开连接`);
+        
+        try {
+          // 🔧 使用类型安全的方式检查和调用断开方法
+          const disconnectableProvider = provider as DisconnectableProvider;
+          if (disconnectableProvider.disconnect && typeof disconnectableProvider.disconnect === 'function') {
+            await disconnectableProvider.disconnect();
+            console.log(`✅ ${walletName} provider 断开成功`);
+          } else {
+            console.log(`ℹ️ ${walletName} 不支持程序化断开，需要用户手动断开`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ ${walletName} 断开连接时出错:`, error);
+          // 不抛出错误，因为断开连接失败不应该阻止清理流程
+        }
       }
     };
 
@@ -323,7 +399,7 @@ export class WalletManager {
     try {
       const chainIdHex = await provider.request({ method: "eth_chainId" });
       if (typeof chainIdHex === 'string' && /^0x[0-9a-fA-F]+$/.test(chainIdHex)) {
-        return parseInt(chainIdHex, 16); // 🔧 明确返回 number 类型
+        return parseInt(chainIdHex, 16);
       }
       // 🔧 如果已经是数字，直接返回
       if (typeof chainIdHex === 'number') {

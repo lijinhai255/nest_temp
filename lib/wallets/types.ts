@@ -6,6 +6,7 @@ export interface WalletDetector {
   rdns: string;
   detect(provider: EthereumProvider): boolean;
   getIcon?(): string;
+  
 }
 
 export interface WalletConfig {

@@ -83,6 +83,8 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
   // 🆕 在组件内部使用 wagmi hooks
   const account = useAccount();
   const currentChainId = useChainId();
+  // 存储当前的钱包
+  const [currentWalletId, setCurrentWalletId] = useState("");
 
   // 🆕 使用 wagmi 的 useBalance hook
   const {
@@ -169,11 +171,11 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
     }
   }, [balanceData, balanceError, state.isConnected]);
 
-  // 🚀 增强的钱包连接函数
+  // 🚀 简化的钱包连接函数 - 统一使用 EIP-6963 标准
   const connectWallet = async (
     walletId: string
   ): Promise<WalletConnectionResult> => {
-    console.log("🚀 开始连接钱包:", walletId);
+    console.log("🚀 开始连接钱包:", walletId, walletInstances["已安装的钱包"]);
 
     if (!walletId) {
       throw new Error("钱包 ID 不能为空");
@@ -187,37 +189,78 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
     }));
 
     try {
-      // 1. 首先尝试从检测到的钱包中连接
-      const detectedWallet = detectedWallets.find((w) => w.id === walletId);
-      console.log("detectedWallet", detectedWallet);
-      if (detectedWallet) {
-        console.log("📱 使用检测到的钱包连接:", detectedWallet.name);
-        const result = await walletManager.connectWallet(walletId);
-        return await handleConnectionSuccess(result, walletId);
-      }
-
-      // 2. 如果不是检测到的钱包，检查是否是配置的钱包
-      const configuredWallet = WalletFinder.findById(walletId, walletInstances);
-      if (configuredWallet) {
-        console.log("⚙️ 使用配置的钱包连接:", configuredWallet.name);
-        const result = await ConfiguredWalletConnector.connect(
-          configuredWallet
-        );
-        return await handleConnectionSuccess(result, walletId);
-      }
-
-      // 3. 最后尝试通过钱包注册表连接
-      const walletConfig = getWalletConfig(walletId);
-      if (walletConfig) {
-        console.log("📋 使用注册表钱包连接:", walletConfig.name);
-        const result = await walletManager.connectWallet(walletId);
-        return await handleConnectionSuccess(result, walletId);
-      }
-
-      throw new Error(`未找到钱包: ${walletId}`);
+      // 统一使用 walletManager 进行连接
+      // walletManager 内部会处理 EIP-6963 和其他连接方式
+      const result = await walletManager.connectWallet(walletId);
+      setCurrentWalletId(walletId);
+      return await handleConnectionSuccess(result, walletId);
     } catch (error) {
       console.error("❌ 连接钱包失败:", error);
       return await handleConnectionError(error, walletId);
+    }
+  };
+
+  // 在 WalletProvider 组件中修复 disconnect 函数
+  const disconnect = async (): Promise<void> => {
+    console.log("🔌 开始断开钱包连接", {
+      chainId: currentChainId,
+      walletId: currentWalletId,
+    });
+
+    try {
+      // 🔧 调用 walletManager 的断开连接方法
+      await walletManager.disconnectWallet(currentWalletId);
+      setState((prev) => ({
+        ...prev,
+        isConnected: false,
+        isDisconnected: true,
+        address: "",
+        chainID: "-1",
+        wallet: undefined,
+        signer: undefined,
+        balance: "0.0000",
+      }));
+    } catch (error) {
+      console.warn("⚠️ 断开钱包连接器时出错:", error);
+      // 不抛出错误，因为断开连接失败不应该阻止清理流程
+    }
+
+    // 🧹 清理本地存储
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("lastConnectedWallet");
+      localStorage.removeItem("walletAddress");
+      console.log("🧹 已清理本地存储");
+    }
+
+    // 🔄 重置当前钱包ID
+    setCurrentWalletId("");
+
+    console.log("✅ 钱包断开连接完成");
+  };
+
+  const switchChain = async (chainId: number): Promise<void> => {
+    setState((prev) => ({
+      ...prev,
+      chainID: chainId.toString(),
+    }));
+  };
+
+  const openModal = (): void => {
+    setIsModalOpen(true);
+  };
+
+  const closeModal = (): void => {
+    setIsModalOpen(false);
+  };
+
+  // 🆕 手动刷新余额的函数
+  const fetchBalance = async (): Promise<void> => {
+    if (!state.isConnected || !state.address) return;
+
+    try {
+      await refetchBalance();
+    } catch (error) {
+      console.error("手动刷新余额失败:", error);
     }
   };
 
@@ -263,8 +306,24 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
     error: unknown,
     walletId: string
   ): Promise<never> => {
-    const errorMessage =
-      error instanceof Error ? error.message : "连接钱包时发生未知错误";
+    let errorMessage = "连接钱包时发生未知错误";
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+
+      // 检查是否是用户拒绝授权的错误
+      const errorStr = error.message.toLowerCase();
+      if (
+        errorStr.includes("user rejected") ||
+        errorStr.includes("user denied") ||
+        errorStr.includes("user cancelled") ||
+        errorStr.includes("拒绝") ||
+        errorStr.includes("取消")
+      ) {
+        errorMessage = "用户拒绝了授权请求";
+        console.log("ℹ️ 用户拒绝了钱包授权请求", walletId);
+      }
+    }
 
     setState((prev) => ({
       ...prev,
@@ -357,50 +416,6 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
 
     initWallets();
   }, [wallets, projectId]);
-
-  const disconnect = async (): Promise<void> => {
-    setState((prev) => ({
-      ...prev,
-      isConnected: false,
-      isDisconnected: true,
-      address: "",
-      chainID: "-1",
-      wallet: undefined,
-      signer: undefined,
-      balance: "0.0000",
-    }));
-
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("lastConnectedWallet");
-      localStorage.removeItem("walletAddress");
-    }
-  };
-
-  const switchChain = async (chainId: number): Promise<void> => {
-    setState((prev) => ({
-      ...prev,
-      chainID: chainId.toString(),
-    }));
-  };
-
-  const openModal = (): void => {
-    setIsModalOpen(true);
-  };
-
-  const closeModal = (): void => {
-    setIsModalOpen(false);
-  };
-
-  // 🆕 手动刷新余额的函数
-  const fetchBalance = async (): Promise<void> => {
-    if (!state.isConnected || !state.address) return;
-
-    try {
-      await refetchBalance();
-    } catch (error) {
-      console.error("手动刷新余额失败:", error);
-    }
-  };
 
   // 自动连接逻辑
   useEffect(() => {

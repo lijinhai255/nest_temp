@@ -46,6 +46,6 @@ export function getWalletConfig(id: string): WalletConfig | undefined {
 }
 
 // 根据 RDNS 获取钱包配置
-export function getWalletConfigByRdns(rdns: string): WalletConfig | undefined {
-  return WALLET_REGISTRY.find(wallet => wallet.rdns === rdns);
+export function getWalletConfigById(id: string): WalletConfig | undefined {
+  return WALLET_REGISTRY.find(wallet => wallet.id === id);
 }

@@ -139,73 +139,148 @@ const ChainSwitcher = ({
   const [isLoading, setIsLoading] = useState(false);
   const [loadingChainId, setLoadingChainId] = useState<number | null>(null);
 
+  console.log("🔗 ChainSwitcher 组件状态:", {
+    chainID,
+    isConnected,
+    provider: !!provider,
+    variant,
+    showTestnets,
+    supportedChainsCount: supportedChains.length,
+  });
+
   // 获取当前链配置
   const getCurrentChain = (): ChainConfig | undefined => {
-    if (!chainID) return undefined;
-    return supportedChains.find((chain) => chain.id === parseInt(chainID));
+    if (!chainID) {
+      console.log("⚠️ getCurrentChain: chainID 为空");
+      return undefined;
+    }
+
+    const currentChain = supportedChains.find(
+      (chain) => chain.id === parseInt(chainID)
+    );
+    console.log("🔍 getCurrentChain:", {
+      chainID,
+      parsedChainID: parseInt(chainID),
+      foundChain: currentChain ? currentChain.shortName : "未找到",
+      allSupportedChains: supportedChains.map((c) => ({
+        id: c.id,
+        name: c.shortName,
+      })),
+    });
+
+    return currentChain;
   };
 
   // 过滤链列表
   const getFilteredChains = (): ChainConfig[] => {
     const testnetIds = [11155111, 5, 80001]; // Sepolia, Goerli, Mumbai
 
-    if (showTestnets) {
-      return supportedChains;
-    }
+    const filtered = showTestnets
+      ? supportedChains
+      : supportedChains.filter((chain) => !testnetIds.includes(chain.id));
 
-    return supportedChains.filter((chain) => !testnetIds.includes(chain.id));
+    console.log("🔽 getFilteredChains:", {
+      showTestnets,
+      testnetIds,
+      totalChains: supportedChains.length,
+      filteredChains: filtered.length,
+      filteredList: filtered.map((c) => ({ id: c.id, name: c.shortName })),
+    });
+
+    return filtered;
   };
 
   // 切换链
   const handleSwitchChain = async (targetChain: ChainConfig) => {
+    console.log("🚀 开始切换链:", {
+      targetChain: targetChain.shortName,
+      targetChainId: targetChain.id,
+      currentChainId: chainID,
+      isConnected,
+      hasProvider: !!provider,
+    });
+
     if (!isConnected || !provider) {
-      onChainError?.(new Error("钱包未连接"));
+      const error = new Error("钱包未连接");
+      console.error("❌ 钱包连接检查失败:", {
+        isConnected,
+        hasProvider: !!provider,
+      });
+      onChainError?.(error);
       return;
     }
 
     if (parseInt(chainID) === targetChain.id) {
+      console.log("ℹ️ 已经在目标链上，无需切换:", targetChain.shortName);
       return; // 已经是目标链
     }
 
     setIsLoading(true);
     setLoadingChainId(targetChain.id);
+    console.log("⏳ 设置加载状态:", {
+      isLoading: true,
+      loadingChainId: targetChain.id,
+    });
 
     try {
+      const hexChainId = `0x${targetChain.id.toString(16)}`;
+      console.log("🔄 尝试切换链 - wallet_switchEthereumChain:", {
+        method: "wallet_switchEthereumChain",
+        chainId: hexChainId,
+        targetChain: targetChain.shortName,
+      });
+
       // 尝试切换到目标链
       await provider.request({
         method: "wallet_switchEthereumChain",
-        params: [
-          { chainId: `0x${targetChain.id.toString(16)}` } as SwitchChainParams,
-        ],
+        params: [{ chainId: hexChainId } as SwitchChainParams],
       });
 
+      console.log("✅ wallet_switchEthereumChain 成功");
+
       // 更新内部状态
+      console.log("🔄 调用内部 switchChain 方法:", targetChain.id);
       await switchChain(targetChain.id);
+
+      console.log("🎉 链切换完全成功:", {
+        chainId: targetChain.id,
+        chainName: targetChain.shortName,
+      });
 
       onChainChanged?.(targetChain.id, targetChain);
     } catch (error: unknown) {
-      console.error("切换链失败:", error);
+      console.error("❌ 切换链失败:", error);
 
       const walletError = error as WalletError;
+      console.log("🔍 错误详情:", {
+        errorCode: walletError.code,
+        errorMessage: walletError.message,
+        errorType: typeof error,
+      });
 
       // 如果链不存在，尝试添加链
       if (walletError.code === 4902) {
+        console.log("🔧 链不存在 (错误码 4902)，尝试添加链...");
         try {
           await addChainToWallet(targetChain);
+          console.log("✅ 添加链成功，再次尝试切换...");
           await switchChain(targetChain.id);
+          console.log("🎉 添加链后切换成功");
           onChainChanged?.(targetChain.id, targetChain);
         } catch (addError) {
-          console.error("添加链失败:", addError);
+          console.error("❌ 添加链失败:", addError);
           onChainError?.(
             addError instanceof Error ? addError : new Error("添加链失败")
           );
         }
       } else {
+        console.error("❌ 其他切换链错误:", walletError);
         onChainError?.(
           walletError instanceof Error ? walletError : new Error("切换链失败")
         );
       }
     } finally {
+      console.log("🏁 切换链流程结束，清理加载状态");
       setIsLoading(false);
       setLoadingChainId(null);
     }
@@ -213,7 +288,12 @@ const ChainSwitcher = ({
 
   // 添加链到钱包
   const addChainToWallet = async (chain: ChainConfig) => {
-    if (!provider) throw new Error("Provider 不可用");
+    console.log("➕ 开始添加链到钱包:", chain.shortName);
+
+    if (!provider) {
+      console.error("❌ Provider 不可用");
+      throw new Error("Provider 不可用");
+    }
 
     const chainParams: AddChainParams = {
       chainId: `0x${chain.id.toString(16)}`,
@@ -223,10 +303,14 @@ const ChainSwitcher = ({
       blockExplorerUrls: chain.blockExplorerUrls,
     };
 
+    console.log("📝 添加链参数:", chainParams);
+
     await provider.request({
       method: "wallet_addEthereumChain",
       params: [chainParams],
     });
+
+    console.log("✅ wallet_addEthereumChain 调用成功");
   };
 
   // 渲染链图标
@@ -255,14 +339,24 @@ const ChainSwitcher = ({
 
   // 如果未连接，不显示
   if (!isConnected) {
+    console.log("🚫 钱包未连接，不显示 ChainSwitcher");
     return null;
   }
 
   const currentChain = getCurrentChain();
   const filteredChains = getFilteredChains();
 
+  console.log("🎨 渲染 ChainSwitcher:", {
+    variant,
+    currentChain: currentChain ? currentChain.shortName : "未知",
+    filteredChainsCount: filteredChains.length,
+    isLoading,
+    loadingChainId,
+  });
+
   // 图标模式
   if (variant === "icon-only") {
+    console.log("🎯 渲染图标模式");
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -285,7 +379,10 @@ const ChainSwitcher = ({
           {filteredChains.map((chain) => (
             <DropdownMenuItem
               key={chain.id}
-              onClick={() => handleSwitchChain(chain)}
+              onClick={() => {
+                console.log("🖱️ 点击链选项 (图标模式):", chain.shortName);
+                handleSwitchChain(chain);
+              }}
               disabled={loadingChainId === chain.id}
               className="flex items-center gap-3"
             >
@@ -307,6 +404,7 @@ const ChainSwitcher = ({
 
   // 紧凑模式
   if (variant === "compact") {
+    console.log("🎯 渲染紧凑模式");
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -338,7 +436,10 @@ const ChainSwitcher = ({
           {filteredChains.map((chain) => (
             <DropdownMenuItem
               key={chain.id}
-              onClick={() => handleSwitchChain(chain)}
+              onClick={() => {
+                console.log("🖱️ 点击链选项 (紧凑模式):", chain.shortName);
+                handleSwitchChain(chain);
+              }}
               disabled={loadingChainId === chain.id}
               className="flex items-center gap-3"
             >
@@ -359,6 +460,7 @@ const ChainSwitcher = ({
   }
 
   // 默认模式
+  console.log("🎯 渲染默认模式");
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -396,7 +498,10 @@ const ChainSwitcher = ({
         {filteredChains.map((chain) => (
           <DropdownMenuItem
             key={chain.id}
-            onClick={() => handleSwitchChain(chain)}
+            onClick={() => {
+              console.log("🖱️ 点击链选项 (默认模式):", chain.shortName);
+              handleSwitchChain(chain);
+            }}
             disabled={loadingChainId === chain.id}
             className="flex items-center gap-3 py-2"
           >

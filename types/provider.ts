@@ -24,6 +24,7 @@ export interface EthereumProvider {
   on?(event: string, handler: (...args: unknown[]) => void): void;
   removeListener?(event: string, handler: (...args: unknown[]) => void): void;
   isConnected?(): boolean;
+  enable?():boolean
 }
 
 // 🔧 修复连接器返回类型

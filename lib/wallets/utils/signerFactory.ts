@@ -10,31 +10,51 @@ export class SignerFactory {
   static createFromProvider(provider: EthereumProvider, address: string): WalletSigner {
     return {
       provider,
-      getAddress:  () => address,
+      getAddress: () => address,
       signMessage: async (message: string) => {
-        return provider.request({
-          method: "personal_sign",
-          params: [message, address],
-        }) as Promise<string>;
+        try {
+          return await provider.request({
+            method: "personal_sign",
+            params: [message, address],
+          }) as Promise<string>;
+        } catch (error) {
+          console.error("签名消息失败:", error);
+          throw new Error("签名消息失败");
+        }
       },
       signTransaction: async (transaction: unknown) => {
-        return provider.request({
-          method: "eth_signTransaction",
-          params: [transaction],
-        }) as Promise<string>;
+        try {
+          return await provider.request({
+            method: "eth_signTransaction",
+            params: [transaction],
+          }) as Promise<string>;
+        } catch (error) {
+          console.error("签名交易失败:", error);
+          throw new Error("签名交易失败");
+        }
       },
       sendTransaction: async (transaction: unknown) => {
-        return provider.request({
-          method: "eth_sendTransaction",
-          params: [transaction],
-        });
+        try {
+          return await provider.request({
+            method: "eth_sendTransaction",
+            params: [transaction],
+          });
+        } catch (error) {
+          console.error("发送交易失败:", error);
+          throw new Error("发送交易失败");
+        }
       },
       getNonce: async (blockTag?: string) => {
-        const result = await provider.request({
-          method: "eth_getTransactionCount",
-          params: [address, blockTag || "latest"],
-        }) as string;
-        return parseInt(result, 16);
+        try {
+          const result = await provider.request({
+            method: "eth_getTransactionCount",
+            params: [address, blockTag || "latest"],
+          }) as string;
+          return parseInt(result, 16);
+        } catch (error) {
+          console.error("获取 nonce 失败:", error);
+          throw new Error("获取 nonce 失败");
+        }
       },
       connect: (newProvider: EthereumProvider) => {
         return SignerFactory.createFromProvider(newProvider, address);
@@ -60,15 +80,11 @@ export class SignerFactory {
     ) {
       return {
         provider: signerObj.provider as EthereumProvider,
-        getAddress: signerObj.getAddress() ,
-        signMessage: signerObj.signMessage as (
-          message: string
-        ) => Promise<string>,
+        getAddress: signerObj.getAddress(),
+        signMessage: signerObj.signMessage as (message: string) => Promise<string>,
         connect:
           typeof signerObj.connect === "function"
-            ? (signerObj.connect as (
-                provider: EthereumProvider
-              ) => WalletSigner)
+            ? (signerObj.connect as (provider: EthereumProvider) => WalletSigner)
             : undefined,
         getNonce:
           typeof signerObj.getNonce === "function"
@@ -76,15 +92,11 @@ export class SignerFactory {
             : undefined,
         signTransaction:
           typeof signerObj.signTransaction === "function"
-            ? (signerObj.signTransaction as (
-                transaction: unknown
-              ) => Promise<string>)
+            ? (signerObj.signTransaction as (transaction: unknown) => Promise<string>)
             : undefined,
         sendTransaction:
           typeof signerObj.sendTransaction === "function"
-            ? (signerObj.sendTransaction as (
-                transaction: unknown
-              ) => Promise<unknown>)
+            ? (signerObj.sendTransaction as (transaction: unknown) => Promise<unknown>)
             : undefined,
       };
     }

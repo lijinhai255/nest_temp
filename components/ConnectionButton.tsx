@@ -69,6 +69,7 @@ const EnhancedConnectButton = ({
             supportedChains={supportedChains}
             showTestnets={showTestnets}
             onChainChanged={(chainId, chainConfig) => {
+              console.log("chainId, chainConfig", chainId, chainConfig);
               onChainChange?.(chainId, chainConfig);
             }}
           />

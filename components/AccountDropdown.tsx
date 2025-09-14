@@ -28,6 +28,7 @@ import {
   formatBalance,
   viewOnExplorer,
 } from "@/utils/connect-button-utils";
+import { chain } from "lodash";
 
 interface AccountDropdownProps {
   // 基础信息
@@ -212,7 +213,10 @@ const AccountDropdown = ({
             </>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={onDisconnect} className="text-red-600">
+          <DropdownMenuItem
+            onClick={() => onDisconnect()}
+            className="text-red-600"
+          >
             <LogOut className="w-4 h-4 mr-2" />
             断开连接
           </DropdownMenuItem>
@@ -335,7 +339,10 @@ const AccountDropdown = ({
         )}
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onDisconnect} className="text-red-600">
+        <DropdownMenuItem
+          onClick={() => onDisconnect()}
+          className="text-red-600"
+        >
           <LogOut className="w-4 h-4 mr-2" />
           断开连接
         </DropdownMenuItem>
