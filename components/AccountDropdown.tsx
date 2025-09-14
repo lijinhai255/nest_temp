@@ -28,7 +28,6 @@ import {
   formatBalance,
   viewOnExplorer,
 } from "@/utils/connect-button-utils";
-import { chain } from "lodash";
 
 interface AccountDropdownProps {
   // 基础信息
