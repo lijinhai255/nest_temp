@@ -12,8 +12,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import WalletConnectModal from "@/components/WalletConnectModal";
 import { projectId } from "@/wagmi";
 import { walletManager, initializeWallets } from "@/lib/walletManager";
-import { getWalletConfig } from "@/lib/wallets/registry";
-import { useAccount, useBalance, useChainId } from "wagmi";
+import { useAccount, useBalance, useChainId, useDisconnect } from "wagmi";
 import { formatEther } from "viem";
 
 // 导入工具函数
@@ -24,8 +23,6 @@ import {
   WalletFinder,
   IconLoader,
 } from "@/lib/wallets/utils";
-import { ConfiguredWalletConnector } from "@/lib/wallets/connectors/configuredWalletConnector";
-
 const WalletContext = createContext<WalletContextValue>({
   isConnecting: false,
   isConnected: false,
@@ -81,11 +78,12 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
   }>({});
 
   // 🆕 在组件内部使用 wagmi hooks
-  const account = useAccount();
-  const currentChainId = useChainId();
+  // const account = useAccount();
+  // const currentChainId = useChainId();
   // 存储当前的钱包
   const [currentWalletId, setCurrentWalletId] = useState("");
-
+  // 🆕 新增 useDisconnect hook
+  const { disconnect: wagmiDisconnect } = useDisconnect();
   // 🆕 使用 wagmi 的 useBalance hook
   const {
     data: balanceData,
@@ -101,54 +99,54 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
   });
 
   // 🆕 监听 wagmi account 变化
-  useEffect(() => {
-    if (account.address && account.isConnected) {
-      setState((prev) => ({
-        ...prev,
-        address: account.address || "",
-        isConnected: account.isConnected,
-        isDisconnected: !account.isConnected,
-        isConnecting: account.isConnecting || false,
-        isReconnecting: account.isReconnecting || false,
-      }));
-    } else if (account.isDisconnected) {
-      setState((prev) => ({
-        ...prev,
-        address: "",
-        isConnected: false,
-        isDisconnected: true,
-        isConnecting: false,
-        isReconnecting: false,
-        balance: "0.0000",
-      }));
-    }
-  }, [
-    account.address,
-    account.isConnected,
-    account.isDisconnected,
-    account.isConnecting,
-    account.isReconnecting,
-  ]);
+  // useEffect(() => {
+  //   if (account.address && account.isConnected) {
+  //     setState((prev) => ({
+  //       ...prev,
+  //       address: account.address || "",
+  //       isConnected: account.isConnected,
+  //       isDisconnected: !account.isConnected,
+  //       isConnecting: account.isConnecting || false,
+  //       isReconnecting: account.isReconnecting || false,
+  //     }));
+  //   } else if (account.isDisconnected) {
+  //     setState((prev) => ({
+  //       ...prev,
+  //       address: "",
+  //       isConnected: false,
+  //       isDisconnected: true,
+  //       isConnecting: false,
+  //       isReconnecting: false,
+  //       balance: "0.0000",
+  //     }));
+  //   }
+  // }, [
+  //   account.address,
+  //   account.isConnected,
+  //   account.isDisconnected,
+  //   account.isConnecting,
+  //   account.isReconnecting,
+  // ]);
 
   // 🆕 监听链变化并更新状态
-  useEffect(() => {
-    if (currentChainId && state.isConnected) {
-      console.log(`🔄 链已切换到: ${currentChainId}`);
+  // useEffect(() => {
+  //   if (currentChainId && state.isConnected) {
+  //     console.log(`🔄 链已切换到: ${currentChainId}`);
 
-      setState((prev) => ({
-        ...prev,
-        chainID: currentChainId.toString(),
-        balance: "0.0000", // 先重置余额显示加载状态
-      }));
+  //     setState((prev) => ({
+  //       ...prev,
+  //       chainID: currentChainId.toString(),
+  //       balance: "0.0000", // 先重置余额显示加载状态
+  //     }));
 
-      // 延迟一点时间再获取余额，确保链切换完成
-      const timer = setTimeout(() => {
-        refetchBalance();
-      }, 500);
+  //     // 延迟一点时间再获取余额，确保链切换完成
+  //     const timer = setTimeout(() => {
+  //       refetchBalance();
+  //     }, 500);
 
-      return () => clearTimeout(timer);
-    }
-  }, [currentChainId, state.isConnected, refetchBalance]);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [currentChainId, state.isConnected, refetchBalance]);
 
   // 🆕 监听余额数据变化并更新状态
   useEffect(() => {
@@ -203,11 +201,11 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
   // 在 WalletProvider 组件中修复 disconnect 函数
   const disconnect = async (): Promise<void> => {
     console.log("🔌 开始断开钱包连接", {
-      chainId: currentChainId,
       walletId: currentWalletId,
     });
 
     try {
+      // 🆕 首先调用 wagmi 的断开连接方法
       // 🔧 调用 walletManager 的断开连接方法
       await walletManager.disconnectWallet(currentWalletId);
       setState((prev) => ({
@@ -215,11 +213,12 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
         isConnected: false,
         isDisconnected: true,
         address: "",
-        chainID: "-1",
+        chainID: "",
         wallet: undefined,
         signer: undefined,
-        balance: "0.0000",
+        balance: "",
       }));
+      wagmiDisconnect();
     } catch (error) {
       console.warn("⚠️ 断开钱包连接器时出错:", error);
       // 不抛出错误，因为断开连接失败不应该阻止清理流程
