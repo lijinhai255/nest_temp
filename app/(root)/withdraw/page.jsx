@@ -242,6 +242,7 @@ export default function StakingPage() {
       description: `${description} 已复制到剪贴板`,
     });
   };
+  console.log("cooldownInfo", cooldownInfo);
 
   return (
     <main className="min-h-screen text-foreground font-work-sans">

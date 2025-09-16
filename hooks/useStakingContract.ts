@@ -431,72 +431,109 @@ export const useStakingContract = () => {
   }, [address, isConnected, poolId]);
 
   // 🔧 获取冷却信息 - 移除对 refreshData 的依赖
-  const fetchCooldownInfo = useCallback(async (): Promise<void> => {
-    if (!isConnected || !address) {
-      setCooldownInfo({
-        unstakeTime: 0,
-        unlockTime: 0,
-        remainingSeconds: 0,
-        remainingBlocks: 0,
-        isReady: false,
-        currentBlock: 0
+ // 🔧 获取冷却信息 - 添加详细调试
+const fetchCooldownInfo = useCallback(async (): Promise<void> => {
+  if (!isConnected || !address) {
+    setCooldownInfo({
+      unstakeTime: 0,
+      unlockTime: 0,
+      remainingSeconds: 0,
+      remainingBlocks: 0,
+      isReady: false,
+      currentBlock: 0
+    });
+    return;
+  }
+  
+  try {
+    console.log('🔍 获取冷却信息...');
+    
+    // 获取当前区块号
+    const currentBlock = await publicClient.getBlockNumber();
+    const currentBlockNum = Number(currentBlock);
+    
+    // 🔧 添加当前区块验证
+    console.log('📦 当前区块号:', currentBlockNum);
+    console.log('📦 当前区块类型:', typeof currentBlockNum);
+    console.log('📦 unstakeLockedBlocks:', unstakeLockedBlocks);
+    console.log('📦 unstakeLockedBlocks类型:', typeof unstakeLockedBlocks);
+    
+    let unstakeBlock = 0;
+    let unstakeTimestamp = 0;
+    
+    // 方法1: 优先从本地存储获取
+    const localData = unstakeStorageUtils.get(address, poolId);
+    if (localData && localData.block > 0) {
+      unstakeBlock = localData.block;
+      unstakeTimestamp = localData.timestamp || 0;
+      
+      // 🔧 添加本地数据验证
+      console.log('✅ 从本地存储获取解质押数据:', { 
+        unstakeBlock, 
+        unstakeTimestamp,
+        blockType: typeof unstakeBlock,
+        timestampType: typeof unstakeTimestamp
       });
-      return;
+      
+      // 🔧 验证数据合理性
+      if (unstakeBlock > currentBlockNum + 1000000) {
+        console.error('❌ 检测到异常的本地解质押区块号:', unstakeBlock);
+        console.error('❌ 当前区块号:', currentBlockNum);
+        console.error('❌ 清除异常的本地数据');
+        unstakeStorageUtils.remove(address, poolId);
+        unstakeBlock = 0;
+        unstakeTimestamp = 0;
+      }
     }
     
-    try {
-      console.log('🔍 获取冷却信息...');
-      
-      // 获取当前区块号
-      const currentBlock = await publicClient.getBlockNumber();
-      const currentBlockNum = Number(currentBlock);
-      
-      let unstakeBlock = 0;
-      let unstakeTimestamp = 0;
-      
-      // 方法1: 优先从本地存储获取
-      const localData = unstakeStorageUtils.get(address, poolId);
-      if (localData && localData.block > 0) {
-        unstakeBlock = localData.block;
-        unstakeTimestamp = localData.timestamp || 0;
-        console.log('✅ 从本地存储获取解质押数据:', { unstakeBlock, unstakeTimestamp });
-      }
-      
-      // 方法2: 如果本地没有数据，从事件日志获取
-      if (unstakeBlock === 0) {
-        try {
-          console.log('📝 本地无数据，从事件日志获取...');
+    // 方法2: 如果本地没有数据，从事件日志获取
+    if (unstakeBlock === 0) {
+      try {
+        console.log('📝 本地无数据，从事件日志获取...');
+        
+        const requestUnstakeEventAbi = {
+          type: 'event' as const,
+          name: 'RequestUnstake',
+          inputs: [
+            { name: 'user', type: 'address', indexed: true },
+            { name: 'poolId', type: 'uint256', indexed: true },
+            { name: 'amount', type: 'uint256', indexed: false }
+          ]
+        };
+        
+        // 使用分批查询获取事件日志
+        const fromBlock = BigInt(Math.max(0, currentBlockNum - 50000));
+        
+        const logs = await queryLogsInBatches(
+          publicClient,
+          PROXY_CONTRACT_ADDRESS,
+          requestUnstakeEventAbi,
+          {
+            user: address as Address,
+            poolId: BigInt(poolId)
+          },
+          fromBlock,
+          'latest',
+          2000
+        );
+        
+        if (logs.length > 0) {
+          const latestLog = logs[logs.length - 1];
+          unstakeBlock = Number(latestLog.blockNumber);
           
-          const requestUnstakeEventAbi = {
-            type: 'event' as const,
-            name: 'RequestUnstake',
-            inputs: [
-              { name: 'user', type: 'address', indexed: true },
-              { name: 'poolId', type: 'uint256', indexed: true },
-              { name: 'amount', type: 'uint256', indexed: false }
-            ]
-          };
+          // 🔧 添加事件日志数据验证
+          console.log('📝 事件日志原始数据:', {
+            blockNumber: latestLog.blockNumber,
+            blockNumberType: typeof latestLog.blockNumber,
+            blockNumberString: latestLog.blockNumber.toString()
+          });
           
-          // 使用分批查询获取事件日志
-          const fromBlock = BigInt(Math.max(0, currentBlockNum - 50000));
-          
-          const logs = await queryLogsInBatches(
-            publicClient,
-            PROXY_CONTRACT_ADDRESS,
-            requestUnstakeEventAbi,
-            {
-              user: address as Address,
-              poolId: BigInt(poolId)
-            },
-            fromBlock,
-            'latest',
-            2000
-          );
-          
-          if (logs.length > 0) {
-            const latestLog = logs[logs.length - 1];
-            unstakeBlock = Number(latestLog.blockNumber);
-            
+          // 🔧 验证区块号合理性
+          if (unstakeBlock > currentBlockNum + 1000000 || unstakeBlock < 0) {
+            console.error('❌ 检测到异常的事件日志区块号:', unstakeBlock);
+            console.error('❌ 当前区块号:', currentBlockNum);
+            unstakeBlock = 0;
+          } else {
             // 获取区块时间戳
             const blockData = await publicClient.getBlock({
               blockNumber: BigInt(unstakeBlock)
@@ -514,52 +551,38 @@ export const useStakingContract = () => {
               hash: latestLog.transactionHash
             };
             unstakeStorageUtils.save(address, poolId, unstakeData);
-          } else {
-            console.log('📝 没有找到RequestUnstake事件日志');
           }
-        } catch (eventError) {
-          console.log('❌ 获取RequestUnstake事件日志失败:', eventError);
+        } else {
+          console.log('📝 没有找到RequestUnstake事件日志');
         }
+      } catch (eventError) {
+        console.log('❌ 获取RequestUnstake事件日志失败:', eventError);
       }
+    }
+    
+    // 计算冷却信息
+    if (unstakeBlock > 0 && unstakeLockedBlocks > 0) {
+      const unlockBlock = unstakeBlock + unstakeLockedBlocks;
+      const remainingBlocks = Math.max(0, unlockBlock - currentBlockNum);
       
-      // 计算冷却信息
-      if (unstakeBlock > 0 && unstakeLockedBlocks > 0) {
-        const unlockBlock = unstakeBlock + unstakeLockedBlocks;
-        const remainingBlocks = Math.max(0, unlockBlock - currentBlockNum);
+      // 🔧 添加计算过程调试
+      console.log('🧮 冷却计算过程:', {
+        unstakeBlock,
+        unstakeLockedBlocks,
+        currentBlockNum,
+        unlockBlock,
+        remainingBlocks,
+        '计算公式': `${unstakeBlock} + ${unstakeLockedBlocks} - ${currentBlockNum} = ${remainingBlocks}`
+      });
+      
+      // 🔧 添加异常检测
+      if (remainingBlocks > 1000000) {
+        console.error('❌ 检测到异常的剩余区块数:', remainingBlocks);
+        console.error('❌ 强制重置为安全状态');
         
-        // 估算剩余时间（Sepolia 测试网约12秒一个区块）
-        const blockTime = 12;
-        const remainingSeconds = remainingBlocks * blockTime;
+        // 清除可能有问题的本地数据
+        unstakeStorageUtils.remove(address, poolId);
         
-        // 计算解锁时间戳
-        let unlockTimestamp = 0;
-        if (unstakeTimestamp > 0) {
-          unlockTimestamp = unstakeTimestamp + (unstakeLockedBlocks * blockTime);
-        }
-        
-        const newCooldownInfo: CooldownInfo = {
-          unstakeTime: unstakeTimestamp,
-          unlockTime: unlockTimestamp,
-          remainingSeconds,
-          remainingBlocks,
-          isReady: remainingBlocks === 0,
-          currentBlock: currentBlockNum
-        };
-        
-        setCooldownInfo(newCooldownInfo);
-        
-        console.log('✅ 冷却信息更新:', {
-          unstakeBlock,
-          currentBlock: currentBlockNum,
-          unlockBlock,
-          remainingBlocks,
-          remainingSeconds,
-          isReady: remainingBlocks === 0,
-          unstakeTimestamp,
-          unlockTimestamp
-        });
-      } else {
-        // 没有解质押记录或锁定区块数为0
         setCooldownInfo({
           unstakeTime: 0,
           unlockTime: 0,
@@ -568,23 +591,67 @@ export const useStakingContract = () => {
           isReady: true,
           currentBlock: currentBlockNum
         });
-        
-        console.log('✅ 没有冷却限制或已解锁');
+        return;
       }
       
-    } catch (err) {
-      console.error('❌ 获取冷却信息失败:', err);
+      // 估算剩余时间（Sepolia 测试网约12秒一个区块）
+      const blockTime = 12;
+      const remainingSeconds = remainingBlocks * blockTime;
+      
+      // 计算解锁时间戳
+      let unlockTimestamp = 0;
+      if (unstakeTimestamp > 0) {
+        unlockTimestamp = unstakeTimestamp + (unstakeLockedBlocks * blockTime);
+      }
+      
+      const newCooldownInfo: CooldownInfo = {
+        unstakeTime: unstakeTimestamp,
+        unlockTime: unlockTimestamp,
+        remainingSeconds,
+        remainingBlocks,
+        isReady: remainingBlocks === 0,
+        currentBlock: currentBlockNum
+      };
+      
+      setCooldownInfo(newCooldownInfo);
+      
+      console.log('✅ 冷却信息更新:', {
+        unstakeBlock,
+        currentBlock: currentBlockNum,
+        unlockBlock,
+        remainingBlocks,
+        remainingSeconds,
+        isReady: remainingBlocks === 0,
+        unstakeTimestamp,
+        unlockTimestamp
+      });
+    } else {
+      // 没有解质押记录或锁定区块数为0
       setCooldownInfo({
         unstakeTime: 0,
         unlockTime: 0,
         remainingSeconds: 0,
         remainingBlocks: 0,
-        isReady: false,
-        currentBlock: 0
+        isReady: true,
+        currentBlock: currentBlockNum
       });
+      
+      console.log('✅ 没有冷却限制或已解锁');
     }
-  }, [address, isConnected, poolId, unstakeLockedBlocks]);
-
+    
+  } catch (err) {
+    console.error('❌ 获取冷却信息失败:', err);
+    setCooldownInfo({
+      unstakeTime: 0,
+      unlockTime: 0,
+      remainingSeconds: 0,
+      remainingBlocks: 0,
+      isReady: false,
+      currentBlock: 0
+    });
+  }
+}, [address, isConnected, poolId, unstakeLockedBlocks]);
+ 
   // 🔧 刷新数据方法 - 现在可以安全地使用所有 fetch 函数
   const refreshData = useCallback(async (): Promise<void> => {
     if (!isConnected || !address) {
@@ -1113,45 +1180,73 @@ export const useStakingContract = () => {
   }, [isConnected, address, cooldownInfo.remainingSeconds, fetchCooldownInfo]);
 
   // 监听区块变化
-  useEffect(() => {
-    if (!isConnected || !address || cooldownInfo.remainingBlocks <= 0) return;
-    
-    console.log('👂 开始监听区块变化');
-    
-    const unwatch = publicClient.watchBlockNumber({
-      onBlockNumber: (blockNumber: bigint) => {
-        console.log('📦 新区块:', blockNumber);
-        // 更新冷却信息中的当前区块和剩余区块
-        setCooldownInfo(prev => {
-          if (prev.remainingBlocks <= 0) return prev;
-          
-          const newCurrentBlock = Number(blockNumber);
-          // 修正计算逻辑
-          const unstakeBlock = prev.unstakeTime > 0 ? 
-            Math.floor(prev.unstakeTime / 12) : 0; // 假设每12秒一个区块
-          const unlockBlock = unstakeBlock + unstakeLockedBlocks;
-          const newRemainingBlocks = Math.max(0, unlockBlock - newCurrentBlock);
-          const newRemainingSeconds = newRemainingBlocks * 12; // 12秒一个区块
-          
+  // 监听区块变化
+useEffect(() => {
+  if (!isConnected || !address || cooldownInfo.remainingBlocks <= 0) return;
+  
+  console.log('👂 开始监听区块变化');
+  
+  const unwatch = publicClient.watchBlockNumber({
+    onBlockNumber: (blockNumber: bigint) => {
+      console.log('📦 新区块:', blockNumber);
+      // 更新冷却信息中的当前区块和剩余区块
+      setCooldownInfo(prev => {
+        if (prev.remainingBlocks <= 0) return prev;
+        
+        const newCurrentBlock = Number(blockNumber);
+        
+        // 🔧 修复：从本地存储获取正确的解质押区块号
+        const localData = unstakeStorageUtils.get(address, poolId);
+        if (!localData || !localData.block) {
+          console.log('⚠️ 没有本地解质押数据，停止区块监听更新');
+          return prev;
+        }
+        
+        const unstakeBlock = localData.block;
+        const unlockBlock = unstakeBlock + unstakeLockedBlocks;
+        const newRemainingBlocks = Math.max(0, unlockBlock - newCurrentBlock);
+        const newRemainingSeconds = newRemainingBlocks * 12;
+        
+        // 🔧 添加数据验证
+        if (newRemainingBlocks > 1000000) {
+          console.error('❌ 区块监听中检测到异常数据，清除本地存储');
+          unstakeStorageUtils.remove(address, poolId);
           return {
             ...prev,
-            currentBlock: newCurrentBlock,
-            remainingBlocks: newRemainingBlocks,
-            remainingSeconds: newRemainingSeconds,
-            isReady: newRemainingBlocks === 0
+            remainingBlocks: 0,
+            remainingSeconds: 0,
+            isReady: true,
+            currentBlock: newCurrentBlock
           };
+        }
+        
+        console.log('📦 区块更新:', {
+          unstakeBlock,
+          currentBlock: newCurrentBlock,
+          unlockBlock,
+          remainingBlocks: newRemainingBlocks
         });
-      },
-      onError: (error: Error) => {
-        console.error('❌ 监听区块失败:', error);
-      }
-    });
-    
-    return () => {
-      console.log('👂 停止监听区块变化');
-      unwatch();
-    };
-  }, [isConnected, address, cooldownInfo.remainingBlocks, unstakeLockedBlocks]);
+        
+        return {
+          ...prev,
+          currentBlock: newCurrentBlock,
+          remainingBlocks: newRemainingBlocks,
+          remainingSeconds: newRemainingSeconds,
+          isReady: newRemainingBlocks === 0
+        };
+      });
+    },
+    onError: (error: Error) => {
+      console.error('❌ 监听区块失败:', error);
+    }
+  });
+  
+  return () => {
+    console.log('👂 停止监听区块变化');
+    unwatch();
+  };
+}, [isConnected, address, cooldownInfo.remainingBlocks, unstakeLockedBlocks, poolId]);
+
 
   return {
     // 状态数据
