@@ -50,3 +50,5 @@ export interface ContractStats {
   successRate: number;
   totalCalls: number;
 }
+
+

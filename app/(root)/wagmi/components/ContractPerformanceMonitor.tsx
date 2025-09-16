@@ -828,6 +828,7 @@ const AdvancedContractMonitor: React.FC<AdvancedContractMonitorProps> = ({
         return "bg-gray-100 text-gray-800";
     }
   };
+  console.log("activeContracts", activeContracts);
 
   return (
     <Card className={className}>
@@ -1484,7 +1485,7 @@ const AdvancedContractMonitor: React.FC<AdvancedContractMonitorProps> = ({
                             (item): item is AbiFunction =>
                               item.type === "function"
                           )
-                          .slice(0, 10)
+                          .slice(0, 100)
                           .map((func, idx) => (
                             <div
                               key={idx}

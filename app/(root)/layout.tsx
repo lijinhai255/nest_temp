@@ -4,6 +4,7 @@ import WallerProvider from "@/provider/index";
 import { chains, walletList } from "@/wagmi";
 import { useEffect, useState } from "react";
 import { ChainInfo, EthereumProvider, WalletGroup } from "@/types/provider";
+import Navbar from "@/components/Navbar";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [provider, setProvider] = useState<EthereumProvider | undefined>(
@@ -18,13 +19,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <main className="font-work-sans">
+    <main className="font-work-sans bg-background">
       {provider ? (
         <WallerProvider
           chains={chains as unknown as ChainInfo[]}
           provider={provider}
           wallets={walletList as unknown as WalletGroup[]}
         >
+          <Navbar />
           {children}
         </WallerProvider>
       ) : (

@@ -97,57 +97,6 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
       staleTime: 5000, // 5秒内认为数据是新鲜的
     },
   });
-
-  // 🆕 监听 wagmi account 变化
-  // useEffect(() => {
-  //   if (account.address && account.isConnected) {
-  //     setState((prev) => ({
-  //       ...prev,
-  //       address: account.address || "",
-  //       isConnected: account.isConnected,
-  //       isDisconnected: !account.isConnected,
-  //       isConnecting: account.isConnecting || false,
-  //       isReconnecting: account.isReconnecting || false,
-  //     }));
-  //   } else if (account.isDisconnected) {
-  //     setState((prev) => ({
-  //       ...prev,
-  //       address: "",
-  //       isConnected: false,
-  //       isDisconnected: true,
-  //       isConnecting: false,
-  //       isReconnecting: false,
-  //       balance: "0.0000",
-  //     }));
-  //   }
-  // }, [
-  //   account.address,
-  //   account.isConnected,
-  //   account.isDisconnected,
-  //   account.isConnecting,
-  //   account.isReconnecting,
-  // ]);
-
-  // 🆕 监听链变化并更新状态
-  // useEffect(() => {
-  //   if (currentChainId && state.isConnected) {
-  //     console.log(`🔄 链已切换到: ${currentChainId}`);
-
-  //     setState((prev) => ({
-  //       ...prev,
-  //       chainID: currentChainId.toString(),
-  //       balance: "0.0000", // 先重置余额显示加载状态
-  //     }));
-
-  //     // 延迟一点时间再获取余额，确保链切换完成
-  //     const timer = setTimeout(() => {
-  //       refetchBalance();
-  //     }, 500);
-
-  //     return () => clearTimeout(timer);
-  //   }
-  // }, [currentChainId, state.isConnected, refetchBalance]);
-
   // 🆕 监听余额数据变化并更新状态
   useEffect(() => {
     if (balanceData && state.isConnected) {

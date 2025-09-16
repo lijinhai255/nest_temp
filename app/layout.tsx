@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { RainbowKitProvider } from "@/components/providers/RainbowKitProvider";
+import Navbar from "@/components/Navbar";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";

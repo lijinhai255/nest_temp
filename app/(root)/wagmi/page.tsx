@@ -19,17 +19,14 @@ import { parseEther, formatEther, formatUnits } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import counterABI from "@/lib/abi/Counter.json";
-import CryptoMonkeys from "@/lib/abi/CryptoMonkeys.json";
 import { toast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import PerformanceMonitor from "./components/PerformanceMonitor";
-import ContractPerformanceMonitor, {
-  AbiItem,
-} from "./components/ContractPerformanceMonitor";
-import { ContractMetric, ContractStats } from "@/types";
+import ContractPerformanceMonitor from "./components/ContractPerformanceMonitor";
+import { monitoredContracts, TEST_TOKENS } from "@/utils/monitoredContracts";
 
 // ERC20 ABI (精简版)
 const erc20ABI = [
@@ -51,22 +48,6 @@ const erc20ABI = [
     type: "event",
   },
 ] as const;
-
-// 常用测试网络的代币合约地址
-const TEST_TOKENS = {
-  // Sepolia 测试网
-  11155111: {
-    name: "MIK (Sepolia 测试网)",
-    address: "0x29c3A0FD12E14E88B73d6ff796AFEd06BF5e5d13",
-    decimals: 6,
-  },
-  // Goerli 测试网
-  5: {
-    name: "USDT (测试)",
-    address: "0x509Ee0d083DdF8AC028f2a56731412edD63223B9",
-    decimals: 6,
-  },
-};
 
 const Wagmi = () => {
   const account = useAccount();
@@ -156,43 +137,6 @@ const Wagmi = () => {
     useWaitForTransactionReceipt({
       hash,
     });
-
-  const normalizeAbi = (abi: readonly Record<string, unknown>[]): AbiItem[] => {
-    return abi.map((item) => ({
-      ...item,
-      type: String(item.type || "function") as
-        | "function"
-        | "event"
-        | "constructor"
-        | "fallback"
-        | "receive"
-        | "error",
-    })) as AbiItem[]; // 返回 AbiItem[] 而不是 Abi
-  };
-
-  const monitoredContracts = [
-    {
-      address: counterABI.address as string,
-      name: "Counter Contract",
-      abi: normalizeAbi(counterABI.abi as readonly Record<string, unknown>[]),
-    },
-    {
-      address: CryptoMonkeys.address as string,
-      name: "CryptoMonkeys NFT",
-      abi: normalizeAbi(
-        CryptoMonkeys.abi as readonly Record<string, unknown>[]
-      ),
-    },
-    ...(TEST_TOKENS[chainId as keyof typeof TEST_TOKENS]
-      ? [
-          {
-            address: TEST_TOKENS[chainId as keyof typeof TEST_TOKENS].address,
-            name: TEST_TOKENS[chainId as keyof typeof TEST_TOKENS].name,
-            abi: [...erc20ABI] as AbiItem[], // 转换为可变数组
-          },
-        ]
-      : []),
-  ];
 
   // 获取当前链上的代币地址
   function getTokenAddressForCurrentChain(): string | undefined {
