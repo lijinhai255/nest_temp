@@ -398,7 +398,7 @@ export const ContractStatusPanel: React.FC<ContractStatusPanelProps> = ({
                     总质押量:
                   </span>
                   <span className="font-medium">
-                    {formatAmount(totalStaked)} ETH
+                    {formatAmount(totalStaked)} ETH={totalStaked}
                   </span>
                 </div>
 
@@ -407,7 +407,8 @@ export const ContractStatusPanel: React.FC<ContractStatusPanelProps> = ({
                     请求提取:
                   </span>
                   <span className="font-medium">
-                    {formatAmount(requestWithdrawAmount)} ETH
+                    {formatAmount(requestWithdrawAmount)} ETH=
+                    {requestWithdrawAmount}
                   </span>
                 </div>
 

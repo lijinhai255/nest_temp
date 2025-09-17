@@ -15,14 +15,15 @@ export default function Home() {
   const { address, isConnected, balance } = useWallet();
 
   // 添加详细的日志输出
-  console.log("Home组件 - address:", address);
-  console.log("Home组件 - isConnected:", isConnected);
-  console.log("Home组件 - balance原始值:", balance);
-  console.log(
-    "Home组件 - balance格式化:",
-    balance ? balance : "未获取",
-    balance
-  );
+  // console.log("Home组件 - address:", address);
+  // console.log("Home组件 - isConnected:", isConnected);
+  // console.log("Home组件 - balance原始值:", balance);
+  // console.log(
+  //   "Home组件 - balance格式化:",
+  //   balance ? balance : "未获取",
+  //   balance
+  // );
+  console.log("balance", balance);
 
   const stakingContractData = useStakingContract();
   const {
@@ -37,35 +38,35 @@ export default function Home() {
   } = stakingContractData;
 
   // 🆕 添加 useStakingContract 的详细调试信息
-  useEffect(() => {
-    console.log("=== useStakingContract 返回值 ===");
-    console.log("完整对象:", stakingContractData);
-    console.log("合约地址:", stakingContractData?.contractAddress);
-    console.log("网络名称:", stakingContractData?.networkName);
-    console.log("最小质押金额:", stakingContractData?.minStakeAmount);
-    console.log("最大质押金额:", stakingContractData?.maxStakeAmount);
-    console.log("已质押金额:", stakedAmount);
-    console.log("待领取奖励:", pendingRewards);
-    console.log("总质押量:", totalStaked);
-    console.log("加载状态:", loading);
-    console.log("错误信息:", error);
-    console.log("池子数量:", stakingContractData?.poolCount);
-    console.log("当前池子ID:", stakingContractData?.poolId);
-    console.log("stakeETH 函数:", typeof stakeETH);
-    console.log("claimRewards 函数:", typeof claimRewards);
-    console.log("refreshData 函数:", typeof refreshData);
-    console.log("================================");
-  }, [
-    stakingContractData,
-    stakedAmount,
-    pendingRewards,
-    totalStaked,
-    loading,
-    error,
-    stakeETH,
-    claimRewards,
-    refreshData,
-  ]);
+  // useEffect(() => {
+  //   console.log("=== useStakingContract 返回值 ===");
+  //   console.log("完整对象:", stakingContractData);
+  //   console.log("合约地址:", stakingContractData?.contractAddress);
+  //   console.log("网络名称:", stakingContractData?.networkName);
+  //   console.log("最小质押金额:", stakingContractData?.minStakeAmount);
+  //   console.log("最大质押金额:", stakingContractData?.maxStakeAmount);
+  //   console.log("已质押金额:", stakedAmount);
+  //   console.log("待领取奖励:", pendingRewards);
+  //   console.log("总质押量:", totalStaked);
+  //   console.log("加载状态:", loading);
+  //   console.log("错误信息:", error);
+  //   console.log("池子数量:", stakingContractData?.poolCount);
+  //   console.log("当前池子ID:", stakingContractData?.poolId);
+  //   console.log("stakeETH 函数:", typeof stakeETH);
+  //   console.log("claimRewards 函数:", typeof claimRewards);
+  //   console.log("refreshData 函数:", typeof refreshData);
+  //   console.log("================================");
+  // }, [
+  //   stakingContractData,
+  //   stakedAmount,
+  //   pendingRewards,
+  //   totalStaked,
+  //   loading,
+  //   error,
+  //   stakeETH,
+  //   claimRewards,
+  //   refreshData,
+  // ]);
 
   // 格式化显示的余额
   const formattedStakedAmount = parseFloat(stakedAmount || "0");
@@ -183,9 +184,7 @@ export default function Home() {
                 </div>
                 <div>
                   <span className="text-3xl font-bold text-white">
-                    {loading
-                      ? "Loading..."
-                      : parseFloat(totalStaked).toFixed(4)}
+                    {loading ? "Loading..." : formattedStakedAmount}
                   </span>
                   <span className="text-3xl font-bold text-primary">ETH</span>
                 </div>

@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  createPublicClient, 
-  http, 
   parseEther, 
   formatEther,
   createWalletClient,
@@ -9,20 +7,19 @@ import {
   Address,
   Block,
   WriteContractReturnType,
-  WaitForTransactionReceiptReturnType
+  WaitForTransactionReceiptReturnType,
+  PublicClient
 } from 'viem';
-import { sepolia } from 'viem/chains';
 import { useWallet } from '@/provider';
+import { usePublicClient } from '@/hooks/usePublicClient';
+
 import implementationABI from '@/lib/abi/MetaNodeStake.json';
 
 export const PROXY_CONTRACT_ADDRESS = implementationABI.address as Address;
-const chain = sepolia;
+
 
 // 创建公共客户端（单例）
-export const publicClient = createPublicClient({
-  chain,
-  transport: http()
-});
+export 
 
 // 🆕 冷却信息类型定义
 interface CooldownInfo {
@@ -172,7 +169,7 @@ const unstakeStorageUtils = {
 
 // 🔧 修正分批查询事件日志的工具函数
 const queryLogsInBatches = async (
-  client: typeof publicClient,
+  client:PublicClient,
   contractAddress: string,
   eventAbi: {
     type: 'event';
@@ -257,7 +254,7 @@ const queryLogsInBatches = async (
 
 export const useStakingContract = () => {
   const { address, isConnected, balance, provider } = useWallet();
-  
+  const {publicClient,chain} = usePublicClient()
   // 基础状态
   const [stakedAmount, setStakedAmount] = useState<string>('0');
   const [pendingRewards, setPendingRewards] = useState<string>('0');
@@ -282,6 +279,7 @@ export const useStakingContract = () => {
     isReady: false,
     currentBlock: 0
   });
+  
 
   // 创建钱包客户端
   const getWalletClient = useCallback(() => {
@@ -294,7 +292,7 @@ export const useStakingContract = () => {
       transport: custom(provider),
       account: address as Address
     });
-  }, [provider, address]);
+  }, [provider, address,chain,publicClient]);
 
   // 获取质押余额
   const fetchStakedAmount = useCallback(async (): Promise<void> => {
@@ -313,10 +311,10 @@ export const useStakingContract = () => {
       setStakedAmount(formatted);
       console.log('✅ 质押余额:', formatted, 'ETH');
     } catch (err) {
-      console.error('❌ 获取质押余额失败:', err);
       setStakedAmount('0');
+      console.error('❌ 获取质押余额失败:', err);
     }
-  }, [address, isConnected, poolId]);
+  }, [address, isConnected, poolId,publicClient]);
 
   // 获取待领取奖励
   const fetchPendingRewards = useCallback(async (): Promise<void> => {
@@ -335,10 +333,11 @@ export const useStakingContract = () => {
       setPendingRewards(formatted);
       console.log('✅ 待领取奖励:', formatted, 'MetaNode');
     } catch (err) {
-      console.error('❌ 获取奖励失败:', err);
       setPendingRewards('0');
+
+      console.error('❌ 获取奖励失败:', err);
     }
-  }, [address, isConnected, poolId]);
+  }, [address, isConnected, poolId,publicClient]);
 
   // 获取总质押量
   const fetchTotalStaked = useCallback(async (): Promise<void> => {
@@ -359,7 +358,7 @@ export const useStakingContract = () => {
       console.error('❌ 获取总质押量失败:', err);
       setTotalStaked('0');
     }
-  }, [poolId]);
+  }, [poolId,publicClient]);
 
   // 获取最小质押金额和锁定区块数
   const fetchPoolInfo = useCallback(async (): Promise<void> => {
@@ -386,7 +385,7 @@ export const useStakingContract = () => {
       setMinStakeAmount('0');
       setUnstakeLockedBlocks(0);
     }
-  }, [poolId]);
+  }, [poolId,publicClient]);
 
   // 获取提取信息
   const fetchWithdrawInfo = useCallback(async (): Promise<void> => {
@@ -428,7 +427,7 @@ export const useStakingContract = () => {
       setPendingWithdrawAmount('0');
       setWithdrawPaused(false);
     }
-  }, [address, isConnected, poolId]);
+  }, [address, isConnected, poolId,publicClient]);
 
   // 🔧 获取冷却信息 - 移除对 refreshData 的依赖
  // 🔧 获取冷却信息 - 添加详细调试
@@ -650,7 +649,7 @@ const fetchCooldownInfo = useCallback(async (): Promise<void> => {
       currentBlock: 0
     });
   }
-}, [address, isConnected, poolId, unstakeLockedBlocks]);
+}, [address, isConnected, poolId, unstakeLockedBlocks,publicClient]);
  
   // 🔧 刷新数据方法 - 现在可以安全地使用所有 fetch 函数
   const refreshData = useCallback(async (): Promise<void> => {
@@ -659,7 +658,7 @@ const fetchCooldownInfo = useCallback(async (): Promise<void> => {
       return;
     }
     
-    console.log('🔄 开始刷新所有数据...');
+    console.log('🔄 开始刷新所有数据...',chain.id,chain.name);
     setLoading(true);
     setError(null);
     
@@ -682,6 +681,8 @@ const fetchCooldownInfo = useCallback(async (): Promise<void> => {
   }, [
     isConnected, 
     address, 
+    chain.id,
+    chain.name,
     fetchStakedAmount, 
     fetchPendingRewards, 
     fetchTotalStaked, 
@@ -701,7 +702,7 @@ const fetchCooldownInfo = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🚀 开始质押:', amount, 'ETH');
+      // console.log('🚀 开始质押:', amount, 'ETH');
       
       // 基础检查
       const amountNum = parseFloat(amount);
@@ -719,24 +720,24 @@ const fetchCooldownInfo = useCallback(async (): Promise<void> => {
       const walletClient = getWalletClient();
       const valueInWei = parseEther(amount);
       
-      console.log('💰 质押金额 (Wei):', valueInWei.toString());
-      console.log('🏊 池子ID:', poolId);
+      // console.log('💰 质押金额 (Wei):', valueInWei.toString());
+      // console.log('🏊 池子ID:', poolId);
       
       // 发送交易
       const hash = await walletClient.writeContract({
         address: PROXY_CONTRACT_ADDRESS,
         abi: implementationABI.abi,
         functionName: 'depositETH',
-        args: [BigInt(poolId)],
+        args: [],
         value: valueInWei,
       });
       
-      console.log('📝 交易哈希:', hash);
+      // console.log('📝 交易哈希:', hash);
       
       // 等待确认
-      console.log('⏳ 等待交易确认...');
+      // console.log('⏳ 等待交易确认...');
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      console.log('✅ 交易确认:', receipt.status);
+      // console.log('✅ 交易确认:', receipt.status);
       
       // 刷新数据
       console.log('🔄 刷新数据...');
@@ -799,7 +800,7 @@ const fetchCooldownInfo = useCallback(async (): Promise<void> => {
       const hash = await walletClient.writeContract({
         address: PROXY_CONTRACT_ADDRESS,
         abi: implementationABI.abi,
-        functionName: 'requestUnstake',
+        functionName: 'unstake',
         args: [BigInt(poolId), amountInWei],
       });
       
@@ -936,7 +937,8 @@ const fetchCooldownInfo = useCallback(async (): Promise<void> => {
     cooldownInfo,
     getWalletClient,
     refreshData,
-    fetchCooldownInfo
+    fetchCooldownInfo,
+    publicClient
   ]);
 
   // 领取奖励
@@ -995,7 +997,8 @@ const fetchCooldownInfo = useCallback(async (): Promise<void> => {
     poolId, 
     pendingRewards, 
     getWalletClient, 
-    fetchPendingRewards
+    fetchPendingRewards,
+    publicClient
   ]);
 
   // 调试函数
@@ -1081,7 +1084,9 @@ const fetchCooldownInfo = useCallback(async (): Promise<void> => {
     pendingWithdrawAmount,
     withdrawPaused,
     balance,
-    cooldownInfo
+    cooldownInfo,
+    chain.name,
+    publicClient
   ]);
 
   // 冷却相关工具方法
@@ -1220,12 +1225,12 @@ useEffect(() => {
           };
         }
         
-        console.log('📦 区块更新:', {
-          unstakeBlock,
-          currentBlock: newCurrentBlock,
-          unlockBlock,
-          remainingBlocks: newRemainingBlocks
-        });
+        // console.log('📦 区块更新:', {
+        //   unstakeBlock,
+        //   currentBlock: newCurrentBlock,
+        //   unlockBlock,
+        //   remainingBlocks: newRemainingBlocks
+        // });
         
         return {
           ...prev,
@@ -1245,9 +1250,9 @@ useEffect(() => {
     console.log('👂 停止监听区块变化');
     unwatch();
   };
-}, [isConnected, address, cooldownInfo.remainingBlocks, unstakeLockedBlocks, poolId]);
+}, [isConnected, address, cooldownInfo.remainingBlocks, unstakeLockedBlocks, poolId,publicClient]);
 
-
+console.log("chain====chain====",chain)
   return {
     // 状态数据
     stakedAmount,
@@ -1292,7 +1297,10 @@ useEffect(() => {
     poolCount: 1,
     maxStakeAmount: "1000",
     // 账户信息
-    balance
+    balance,
+    chain,
+    publicClient
+
   };
 };
 

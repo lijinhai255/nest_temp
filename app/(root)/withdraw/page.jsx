@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,8 +52,32 @@ export default function StakingPage() {
 
     // 调试方法
     debugContract,
+    stakingContractData,
   } = useStakingContract();
-
+  // 🆕 添加 useStakingContract 的详细调试信息
+  useEffect(() => {
+    console.log("=== useStakingContract 返回值 ===");
+    console.log("完整对象:", stakingContractData);
+    console.log("合约地址:", stakingContractData?.contractAddress);
+    console.log("网络名称:", stakingContractData?.networkName);
+    console.log("最小质押金额:", stakingContractData?.minStakeAmount);
+    console.log("最大质押金额:", stakingContractData?.maxStakeAmount);
+    console.log("已质押金额:", stakedAmount);
+    console.log("待领取奖励:", pendingRewards);
+    console.log("总质押量:", totalStaked);
+    console.log("加载状态:", loading);
+    console.log("错误信息:", error);
+    console.log("池子数量:", stakingContractData?.poolCount);
+    console.log("当前池子ID:", stakingContractData?.poolId);
+    console.log("================================");
+  }, [
+    stakingContractData,
+    stakedAmount,
+    pendingRewards,
+    totalStaked,
+    loading,
+    error,
+  ]);
   // 🔧 格式化显示金额（保留4位小数）
   const formatAmount = (amount) => {
     const num = parseFloat(amount);
