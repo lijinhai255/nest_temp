@@ -4,6 +4,7 @@ import {
   DetectedWallet
 } from "@/types/provider";
 import { SignerFactory } from "../utils/signerFactory";
+import { Address } from "viem";
 
 export class EIP6963Connector {
   /**
@@ -34,7 +35,7 @@ export class EIP6963Connector {
 
       return {
         success: true,
-        address,
+        address: address as unknown as Address,
         chainId,
         wallet: {
           id: wallet.id,

@@ -1,4 +1,5 @@
 // types/addPosition.ts - 更新类型定义
+import { PoolInfo } from '@/store/usePoolManagerStore';
 import { Address } from 'viem';
 
 // 基础代币接口
@@ -32,10 +33,10 @@ export interface Pool {
 // 交易对接口 - 统一使用这个
 export interface TradingPair {
   id?: string;
-  token0: Address; // 保持与原有 Pair 兼容
+token0: Address; // 保持与原有 Pair 兼容
   token1: Address; // 保持与原有 Pair 兼容
   fee?: number;
-  pools?: Pool[];
+  pools?: PoolInfo[];
   displayName?: string;
   // 扩展字段
   token0Info?: Token;

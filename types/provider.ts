@@ -1,6 +1,7 @@
 // types/provider.ts - 修复 any 类型错误
 
 import { ethers } from 'ethers';
+import { Address } from 'viem';
 
 // 🔧 添加交易类型定义（移到前面）
 export interface TransactionRequest {
@@ -121,7 +122,7 @@ export interface DetectedWallet {
 // 钱包连接结果
 export interface WalletConnectionResult {
 success: boolean;
-address?: string;  // ✅ 修复：应该是可选的
+address?: Address; // ✅ 修复：应该是可选的
 chainId?: number;
 wallet?: WalletInfo;  // ✅ 修复：应该是可选的
 provider?: EthereumProvider;
@@ -131,7 +132,7 @@ error?: string;  // ✅ 添加错误信息
 
 // 🔧 修复 WalletState 中的 any 类型
 export interface WalletState {
-address: string|undefined;
+address: Address ;
 chainID: string;
 isConnecting: boolean;
 isConnected: boolean;

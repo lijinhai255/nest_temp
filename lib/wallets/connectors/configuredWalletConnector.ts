@@ -5,6 +5,7 @@ import {
   EthereumProvider 
 } from "@/types/provider";
 import { SignerFactory } from "../utils/signerFactory";
+import { Address } from "viem";
 
 export class ConfiguredWalletConnector {
   static async connect(wallet: ExtendedWallet): Promise<WalletConnectionResult> {
@@ -65,7 +66,7 @@ export class ConfiguredWalletConnector {
 
       return {
         success: true,
-        address,
+        address: address as unknown as Address,
         chainId,
         wallet: {
           id: wallet.id,
@@ -102,7 +103,7 @@ export class ConfiguredWalletConnector {
 
       return {
         success: true,
-        address,
+        address: address as unknown as Address,
         chainId,
         wallet: {
           id: wallet.id,

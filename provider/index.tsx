@@ -25,8 +25,8 @@ import {
   useDisconnect,
   usePublicClient,
 } from "wagmi";
-import { formatEther, formatUnits } from "viem";
-
+import { Address, formatEther, formatUnits } from "viem";
+import erc20ABI from "@/lib/abi/erc20Abi.json";
 // 导入工具函数
 import {
   WalletDeduplicator,
@@ -40,7 +40,7 @@ const WalletContext = createContext<WalletContextValue>({
   isConnected: false,
   isDisconnected: true,
   isReconnecting: false,
-  address: "",
+  address: "0x",
   chainID: "-1",
   ensName: null,
   error: null,
@@ -49,7 +49,7 @@ const WalletContext = createContext<WalletContextValue>({
   balance: "0.0000",
   connect: async () => ({
     success: false,
-    address: "",
+    address: "0x",
     wallet: { id: "", name: "", installed: false },
   }),
   disconnect: async () => {},
@@ -77,7 +77,7 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
   wallets,
 }) => {
   const [state, setState] = useState<WalletState>({
-    address: "",
+    address: "0x",
     chainID: "-1",
     isConnecting: false,
     isConnected: false,
@@ -295,7 +295,7 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
         ...prev,
         isConnected: false,
         isDisconnected: true,
-        address: "",
+        address: "0x",
         chainID: "",
         wallet: undefined,
         signer: undefined,
@@ -361,7 +361,7 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
       isConnecting: false,
       isConnected: true,
       isDisconnected: false,
-      address: result.address,
+      address: result.address as unknown as Address,
       chainID: result.chainId?.toString() || prev.chainID,
       wallet: result.wallet,
       provider: safeSigner?.provider || result.provider,
@@ -413,7 +413,7 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
       isConnected: false,
       isDisconnected: true,
       error: new Error(errorMessage),
-      address: "",
+      address: "0x",
       chainID: "-1",
       wallet: undefined,
       provider: undefined,

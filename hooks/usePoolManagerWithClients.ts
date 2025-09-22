@@ -66,7 +66,7 @@ export const usePoolManagerWithClients = () => {
     const walletClient = getWalletClient();
     
     // 修正参数顺序：account 应该在 params 之前
-    return store.createPool(publicClient, walletClient, chain, address, params);
+    return store.createPool(publicClient, walletClient, chain, params,address as unknown as Address);
   };
 
   const createAndInitializePoolIfNecessary = async (
@@ -86,7 +86,7 @@ export const usePoolManagerWithClients = () => {
     console.log('createAndInitializePoolIfNecessary:', address, params);
     
     // 修正参数顺序：account 应该在 params 之前
-    return store.createAndInitializePoolIfNecessary(publicClient, walletClient, chain, params,address);
+    return store.createAndInitializePoolIfNecessary(publicClient, walletClient, chain, params,address as unknown as Address);
   };
 
   // 自动初始化合约

@@ -6,9 +6,12 @@ import {
   TransactionReceipt,
   Abi,
   decodeEventLog as viemDecodeEventLog,
-  Chain
+  Chain,
+  Hex
 } from 'viem';
 import PoolManagerABI from '@/lib/abi/PoolManager.json';
+import { Pool } from '@/types/addPosition';
+import { unknown } from 'zod';
 
 // 定义 PoolInfo 类型
 export interface PoolInfo {
@@ -324,7 +327,7 @@ export const usePoolManagerStore = create<PoolManagerState>((set, get) => ({
             const event = decodeEventLog({
               abi: typedPoolManagerABI,
               data: log.data,
-              topics: [...log.topics], // 将 readonly 数组转换为普通数组
+              topics: [...log.topics] as unknown as [signature: Hex, ...args: Hex[]], // 将 readonly 数组转换为普通数组
             }) as DecodedPoolCreatedEvent;
             
             if (event.eventName === 'PoolCreated') {
@@ -440,17 +443,17 @@ export const usePoolManagerStore = create<PoolManagerState>((set, get) => ({
 function decodeEventLog({ abi, data, topics }: { 
   abi: Abi; 
   data: `0x${string}`; 
-  topics: `0x${string}`[] // 注意这里不再是 readonly
-}): DecodedPoolCreatedEvent {
+  topics:[signature: Hex, ...args: Hex[]] // 注意这里不再是 readonly
+}) {
   try {
     // 使用 viem 的 decodeEventLog 函数
     const decoded = viemDecodeEventLog({
       abi,
       data,
-      topics,
+      topics , // 类型断言
     });
     
-    return decoded as DecodedPoolCreatedEvent;
+    return decoded;
   } catch (error) {
     // 如果 viem 解码失败，使用简化版本
     const eventAbi = abi.find((item) => 

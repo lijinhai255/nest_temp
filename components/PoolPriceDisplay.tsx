@@ -4,6 +4,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { usePoolPrice } from "@/hooks/usePoolPrice";
+import { PoolInfo } from "@/store/usePoolManagerStore";
 
 interface PoolPriceDisplayProps {
   pool?: PoolInfo;

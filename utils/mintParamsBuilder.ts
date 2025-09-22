@@ -1,6 +1,7 @@
 // utils/mintParamsBuilder.ts
-import { parseUnits, Address } from 'viem';
+import { parseUnits, Address, Hex } from 'viem';
 import { Token, Pool } from '@/types/addPosition';
+import { PoolInfo } from "@/store/usePoolManagerStore";
 
 // 匹配你的 Solidity 结构体
 export interface MintParams {
@@ -9,14 +10,14 @@ export interface MintParams {
   index: number; // uint32 在 TypeScript 中用 number
   amount0Desired: bigint; // uint256
   amount1Desired: bigint; // uint256
-  recipient: Address;
+  recipient:[signature: Hex, ...args: Hex[]];
   deadline: bigint; // uint256
 }
 
 export interface MintParamsInput {
   token0: Token;
   token1: Token;
-  selectedPool: Pool;
+  selectedPool: PoolInfo;
   amount0: string;
   amount1: string;
   recipient: string;
@@ -47,7 +48,7 @@ export const buildMintParams = (input: MintParamsInput): MintParams => {
     index: selectedPool.index, // 确保这是 number 类型
     amount0Desired,
     amount1Desired,
-    recipient,
+    recipient: recipient as unknown as [signature: Hex, ...args: Hex[]],
     deadline,
   };
 };
@@ -71,7 +72,7 @@ export const validateMintParams = (params: MintParams): string[] => {
     errors.push('Token1 数量必须大于 0');
   }
 
-  if (!params.recipient || params.recipient === '0x0') {
+  if (!params.recipient) {
     errors.push('接收地址无效');
   }
 

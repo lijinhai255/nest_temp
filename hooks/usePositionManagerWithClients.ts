@@ -41,7 +41,7 @@ export const usePositionManagerWithClients = () => {
       address: tokenAddress,
       abi: erc20Abi,
       functionName: 'allowance',
-      args: targetOwner && tokenAddress ? [targetOwner, spenderAddress] : undefined,
+      args: targetOwner && tokenAddress ? [targetOwner as unknown as Address, spenderAddress] : undefined,
       query: {
         enabled: !!(tokenAddress && targetOwner),
         refetchInterval: 10000, // 每10秒刷新一次
@@ -57,7 +57,7 @@ export const usePositionManagerWithClients = () => {
       address: tokenAddress,
       abi: erc20Abi,
       functionName: 'balanceOf',
-      args: targetOwner && tokenAddress ? [targetOwner] : undefined,
+      args: targetOwner && tokenAddress ? [targetOwner as unknown as Address] : undefined,
       query: {
         enabled: !!(tokenAddress && targetOwner),
         refetchInterval: 10000, // 每10秒刷新一次
@@ -139,52 +139,14 @@ export const usePositionManagerWithClients = () => {
     return sufficient;
   };
 
-  // 🆕 批量检查多个代币的授权状态
-  const useMultiTokenApprovals = (tokens: { address: Address; amount: bigint }[]) => {
-    const approvals = tokens.map(token => 
-      useTokenApproval(token.address, POSITION_MANAGER as Address, address)
-    );
 
-    const needsApproval = tokens.map((token, index) => {
-      const approval = approvals[index];
-      return approval.data ? (approval.data as bigint) < token.amount : true;
-    });
-
-    const isLoading = approvals.some(approval => approval.isLoading);
-    const hasError = approvals.some(approval => approval.error);
-
-    return {
-      approvals,
-      needsApproval,
-      isLoading,
-      hasError,
-      refetch: () => approvals.forEach(approval => approval.refetch())
-    };
-  };
-
-  // 🆕 批量检查多个代币的余额
-  const useMultiTokenBalances = (tokenAddresses: Address[]) => {
-    const balances = tokenAddresses.map(tokenAddress => 
-      useTokenBalance(tokenAddress, address)
-    );
-
-    const isLoading = balances.some(balance => balance.isLoading);
-    const hasError = balances.some(balance => balance.error);
-
-    return {
-      balances,
-      isLoading,
-      hasError,
-      refetch: () => balances.forEach(balance => balance.refetch())
-    };
-  };
 
   // 🆕 授权代币函数
   const approveToken = async (
     tokenAddress: Address,
     spenderAddress: Address = POSITION_MANAGER as Address,
     amount?: bigint
-  ): Promise<string> => {
+  ): Promise<void> => {
     try {
       // 默认授权最大值
       const approveAmount = amount || BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
@@ -274,7 +236,7 @@ export const usePositionManagerWithClients = () => {
       throw new Error('用户地址未提供');
     }
     console.log('Fetching positions for address:', targetAddress);
-    return store.fetchUserPositions(publicClient, targetAddress);
+    return store.fetchUserPositions(publicClient, targetAddress as unknown as Address);
   };
 
   const getPosition = async (positionId: bigint): Promise<PositionInfo | null> => {
@@ -311,7 +273,7 @@ export const usePositionManagerWithClients = () => {
       
       // 执行 mint
       const walletClient = getWalletClient();
-      return store.mint(publicClient, walletClient, chain, address, params);
+      return store.mint(publicClient, walletClient, chain, address as Address , params);
       
     } catch (error) {
       console.error('mintWithApproval 失败:', error);
@@ -395,8 +357,6 @@ export const usePositionManagerWithClients = () => {
     // 🆕 代币相关 Hooks
     useTokenApproval,
     useTokenBalance,
-    useMultiTokenApprovals,
-    useMultiTokenBalances,
     useTransactionConfirmation,
     
     // 🆕 代币相关异步函数

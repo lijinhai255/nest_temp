@@ -1,6 +1,8 @@
 // lib/walletManager.ts - 修复类型安全
 import { DetectedWallet, EthereumProvider, ExtendedWallet, WalletConnectionResult, WalletConnector, WalletConnectResult } from '@/types/provider';
 import { SignerFactory } from './wallets/utils/signerFactory';
+import { unknown } from 'zod';
+import { Address } from 'viem';
 
 interface EIP6963ProviderInfo {
   uuid: string;
@@ -99,7 +101,7 @@ export class WalletManager {
 
       return {
         success: true,
-        address,
+        address:address as unknown as Address,
         chainId,
         wallet: {
           id: wallet.id,

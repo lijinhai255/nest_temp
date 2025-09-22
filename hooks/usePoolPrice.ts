@@ -1,6 +1,7 @@
 // hooks/usePoolPrice.ts
 import { useState, useEffect, useMemo } from 'react';
 import { calculatePriceFromSqrtPriceX96, calculatePriceFromTick, formatLiquidity } from '@/utils/priceCalculations';
+import { PoolInfo } from '@/store/usePoolManagerStore';
 
 interface PoolPrice {
   currentPrice: {

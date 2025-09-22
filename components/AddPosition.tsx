@@ -1,4 +1,4 @@
-// components/AddPosition.tsx - 完整版本
+// components/AddPosition.tsx - 完整版本（移除 any 类型）
 import React, {
   useState,
   useEffect,
@@ -8,75 +8,115 @@ import React, {
 } from "react";
 import { usePoolManagerWithClients } from "@/hooks/usePoolManagerWithClients";
 import { usePoolPrice } from "@/hooks/usePoolPrice";
-import { formatTokenPair } from "@/utils/poolFormatters";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { Address, parseUnits } from "viem";
-import { useAccount } from "wagmi"; // 🆕 添加账户 hook
 import { Button } from "./ui/button";
 import TradingPairSelector from "./TradingPairSelector";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
+
 import { Badge } from "./ui/badge";
-import { Alert, AlertDescription } from "./ui/alert"; // 🆕 添加 Alert 组件
+import { Alert, AlertDescription } from "./ui/alert";
 import TokenAmountInput from "./TokenAmountInput";
 import PoolPriceDisplay from "./PoolPriceDisplay";
 import {
   formatFeePercent,
   TradingPair,
-  Pool,
   Token,
   getTokenInfo,
 } from "@/types/addPosition";
 
-// 🆕 导入新的组件和工具
+// 导入新的组件和工具
 import { PriceCalculator } from "./PriceCalculator";
 import {
   buildMintParams,
   validateMintParams,
   MintParamsInput,
   formatMintParams,
+  MintParams,
 } from "@/utils/mintParamsBuilder";
 import { usePositionManagerWithClients } from "@/hooks/usePositionManagerWithClients";
 import { useWallet } from "@/provider";
+import { useToast } from "@/hooks/use-toast";
+import { PoolInfo } from "@/store/usePoolManagerStore";
+import { ZodNullable } from "zod";
 
-const AddPosition: React.FC = () => {
+// 🆕 定义调试信息的类型
+interface DebugInfo {
+  selectedPair: boolean;
+  selectedToken0: string | null;
+  selectedToken1: string | null;
+  selectedPool: boolean;
+  address: boolean;
+  availableTokensCount: number;
+  tradingPairsCount: number;
+  poolsInfoCount: number;
+  pairDetails?: {
+    displayName: string;
+    token0: string;
+    token1: string;
+    poolsCount: number;
+  };
+}
+
+// 🆕 定义状态更新后检查的类型
+interface StateCheckInfo {
+  selectedPair: string;
+  token0: string;
+  token1: string;
+  poolsCount: number;
+  firstPool: PoolInfo;
+}
+
+// 添加组件属性接口
+interface AddPositionProps {
+  onPositionAdded?: () => void;
+  className?: string;
+}
+
+const AddPosition: React.FC<AddPositionProps> = ({
+  onPositionAdded,
+  className,
+}) => {
+  const { toast } = useToast();
   const { fetchPairs, fetchAllPools, pairs, poolsInfo, isLoading } =
     usePoolManagerWithClients();
   const { mintWithApproval, checkTokenBalance, checkSufficientBalance } =
     usePositionManagerWithClients();
 
-  // 🆕 添加账户信息
+  // 添加账户信息
   const { address } = useWallet();
 
   // 状态定义
   const [selectedPair, setSelectedPair] = useState<TradingPair | null>(null);
-  const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
+  const [selectedPool, setSelectedPool] = useState<PoolInfo | null>(null);
   const [amount0, setAmount0] = useState<string>("");
   const [amount1, setAmount1] = useState<string>("");
   const [availableTokens, setAvailableTokens] = useState<Token[]>([]);
-  const [filteredPools, setFilteredPools] = useState<Pool[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [filteredPools, setFilteredPools] = useState<PoolInfo[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [selectedToken0, setSelectedToken0] = useState<Token | undefined>();
   const [selectedToken1, setSelectedToken1] = useState<Token | undefined>();
 
-  // 🆕 添加价格区间状态
+  // 添加价格区间状态
   const [lowerPrice, setLowerPrice] = useState<string>("");
   const [upperPrice, setUpperPrice] = useState<string>("");
 
-  // 🔧 添加调试状态
-  const [debugInfo, setDebugInfo] = useState<any>({});
+  // 🔧 修复调试状态类型
+  const [debugInfo, setDebugInfo] = useState<DebugInfo>({
+    selectedPair: false,
+    selectedToken0: null,
+    selectedToken1: null,
+    selectedPool: false,
+    address: false,
+    availableTokensCount: 0,
+    tradingPairsCount: 0,
+    poolsInfoCount: 0,
+  });
 
-  const mountedRef = useRef(true);
-  const isDataLoaded = useRef(false);
+  const mountedRef = useRef<boolean>(true);
+  const isDataLoaded = useRef<boolean>(false);
 
   // 转换 pairs 数据为 TradingPair 格式
-  const tradingPairs = useMemo(() => {
+  const tradingPairs = useMemo((): TradingPair[] => {
     if (!pairs?.length) return [];
 
     console.log("🔍 转换 tradingPairs:", {
@@ -124,7 +164,7 @@ const AddPosition: React.FC = () => {
   }, [pairs, poolsInfo]);
 
   // 获取可用代币
-  const memoizedAvailableTokens = useMemo(() => {
+  const memoizedAvailableTokens = useMemo((): Token[] => {
     if (!pairs?.length) return [];
 
     const uniqueTokens = new Set<Address>();
@@ -133,7 +173,7 @@ const AddPosition: React.FC = () => {
       uniqueTokens.add(pair.token1);
     });
 
-    const tokens = Array.from(uniqueTokens).map((address) => {
+    const tokens: Token[] = Array.from(uniqueTokens).map((address) => {
       const info = getTokenInfo(address);
       return {
         address,
@@ -155,7 +195,7 @@ const AddPosition: React.FC = () => {
   }, [memoizedAvailableTokens]);
 
   // 加载数据
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (): Promise<void> => {
     if (isDataLoaded.current || isLoading) return;
 
     try {
@@ -177,10 +217,9 @@ const AddPosition: React.FC = () => {
   }, [loadData]);
 
   // 处理交易对选择
-  // 处理交易对选择
-  const handlePairSelect = useCallback((pair: TradingPair) => {
+  const handlePairSelect = useCallback((pair: TradingPair): void => {
     console.log("🔍 AddPosition 收到交易对选择:", pair);
-    console.log("🔍 pair.pools:", pair.pools); // 🆕 查看池子数据
+    console.log("🔍 pair.pools:", pair.pools);
     console.log("🔍 当前 mountedRef.current:", mountedRef.current);
     console.log("🔍 开始更新状态...");
 
@@ -191,7 +230,7 @@ const AddPosition: React.FC = () => {
     setLowerPrice("");
     setUpperPrice("");
 
-    // 🔧 直接从 pair 中获取代币信息
+    // 直接从 pair 中获取代币信息
     const token0: Token = {
       address: pair.token0,
       symbol: pair.token0Info?.symbol || `T${pair.token0.slice(-4)}`,
@@ -214,11 +253,11 @@ const AddPosition: React.FC = () => {
     setSelectedToken1(token1);
 
     // 设置过滤的池子
-    if (pair.pools?.length > 0) {
+    if (pair.pools && pair.pools?.length > 0) {
       setFilteredPools(pair.pools);
       console.log("🔍 设置可用池子:", pair.pools);
 
-      // 🆕 ✅ 自动选择第一个池子 - 这是关键！
+      // 自动选择第一个池子
       const firstPool = pair.pools[0];
       console.log("🔍 自动选择第一个池子:", firstPool);
       setSelectedPool(firstPool);
@@ -227,21 +266,24 @@ const AddPosition: React.FC = () => {
       console.log("⚠️ 没有找到相关池子");
     }
 
-    // 🔧 使用 setTimeout 确保状态更新后再打印调试信息
+    // 🔧 使用类型安全的 setTimeout
     setTimeout(() => {
-      console.log("🔍 状态更新后检查:", {
-        selectedPair: pair.displayName,
-        token0: token0.symbol,
-        token1: token1.symbol,
-        poolsCount: pair.pools?.length || 0,
-        firstPool: pair.pools?.[0] || null, // 🆕 检查第一个池子
-      });
+      if (pair.displayName && pair.pools?.[0]) {
+        const stateCheckInfo: StateCheckInfo = {
+          selectedPair: pair.displayName,
+          token0: token0.symbol,
+          token1: token1.symbol,
+          poolsCount: pair.pools?.length || 0,
+          firstPool: pair.pools?.[0],
+        };
+        console.log("🔍 状态更新后检查:", stateCheckInfo);
+      }
     }, 100);
   }, []);
 
-  const handlePoolSelect = useCallback((pool: Pool) => {
+  const handlePoolSelect = useCallback((pool: PoolInfo): void => {
     console.log("🔍 AddPosition 收到池子选择:", pool);
-    if (mountedRef.current) {
+    if (mountedRef.current && pool) {
       setSelectedPool(pool);
     }
   }, []);
@@ -265,17 +307,18 @@ const AddPosition: React.FC = () => {
     );
 
     console.log("🔍 选中池子信息:", { selectedPool, found });
-    return found;
-  }, [selectedPool, poolsInfo, selectedToken0, selectedToken0]);
+    return found || null;
+  }, [selectedPool, poolsInfo]);
 
   // 使用 usePoolPrice Hook
+
   const { price: poolPrice, isLoading: priceLoading } = usePoolPrice(
-    selectedPoolInfo,
+    selectedPoolInfo || undefined,
     selectedToken0?.decimals || 18,
     selectedToken1?.decimals || 18
   );
 
-  // 🆕 当池子价格加载完成时，自动设置价格区间
+  // 当池子价格加载完成时，自动设置价格区间
   useEffect(() => {
     if (poolPrice && !lowerPrice && !upperPrice) {
       setLowerPrice(poolPrice.priceRange.lowerPrice.toFixed(6));
@@ -300,7 +343,7 @@ const AddPosition: React.FC = () => {
 
   // 金额变化处理
   const handleAmount0Change = useCallback(
-    (value: string) => {
+    (value: string): void => {
       setAmount0(value);
 
       if (poolPrice && value && !isNaN(parseFloat(value))) {
@@ -318,7 +361,7 @@ const AddPosition: React.FC = () => {
   );
 
   const handleAmount1Change = useCallback(
-    (value: string) => {
+    (value: string): void => {
       setAmount1(value);
 
       if (poolPrice && value && !isNaN(parseFloat(value))) {
@@ -335,8 +378,8 @@ const AddPosition: React.FC = () => {
     [poolPrice, selectedToken0?.decimals]
   );
 
-  // 🆕 添加流动性处理函数
-  const handleAddLiquidity = useCallback(async () => {
+  // 添加流动性处理函数
+  const handleAddLiquidity = useCallback(async (): Promise<void> => {
     if (
       !selectedPair ||
       !selectedPool ||
@@ -345,6 +388,11 @@ const AddPosition: React.FC = () => {
       !address
     ) {
       console.error("缺少必要信息");
+      toast({
+        title: "错误",
+        description: "缺少必要信息，请检查所有字段",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -354,7 +402,7 @@ const AddPosition: React.FC = () => {
       const amount0Wei = parseUnits(amount0, selectedToken0.decimals);
       const amount1Wei = parseUnits(amount1, selectedToken1.decimals);
 
-      // 🆕 检查余额
+      // 检查余额
       const hasToken0Balance = await checkSufficientBalance(
         selectedToken0.address,
         amount0Wei
@@ -365,16 +413,24 @@ const AddPosition: React.FC = () => {
       );
 
       if (!hasToken0Balance) {
-        alert(`${selectedToken0.symbol} 余额不足！`);
+        toast({
+          title: "余额不足",
+          description: `${selectedToken0.symbol} 余额不足！`,
+          variant: "destructive",
+        });
         return;
       }
 
       if (!hasToken1Balance) {
-        alert(`${selectedToken1.symbol} 余额不足！`);
+        toast({
+          title: "余额不足",
+          description: `${selectedToken1.symbol} 余额不足！`,
+          variant: "destructive",
+        });
         return;
       }
 
-      // 🆕 构建参数并调用 mintWithApproval（自动处理授权）
+      // 构建参数并调用 mintWithApproval（自动处理授权）
       const mintParamsInput: MintParamsInput = {
         token0: selectedToken0,
         token1: selectedToken1,
@@ -387,16 +443,32 @@ const AddPosition: React.FC = () => {
 
       const mintParams = buildMintParams(mintParamsInput);
 
-      // 🚀 使用自动处理授权的方法
-      const result = await mintWithApproval(mintParams);
+      // 使用自动处理授权的方法
+      const result = await mintWithApproval(
+        mintParams as unknown as MintParams & { recipient: Address }
+      );
       console.log("✅ mint 结果:", result);
 
-      // alert("添加流动性成功！");
+      toast({
+        title: "成功",
+        description: "流动性添加成功！",
+      });
 
-      // 重置表单...
+      // 重置表单
+      setAmount0("");
+      setAmount1("");
+
+      // 调用回调函数
+      if (onPositionAdded) {
+        onPositionAdded();
+      }
     } catch (error) {
       console.error("添加流动性失败:", error);
-      // alert(error.message || "添加流动性失败");
+      toast({
+        title: "失败",
+        description: "添加流动性失败，请稍后再试",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -408,67 +480,61 @@ const AddPosition: React.FC = () => {
     address,
     amount0,
     amount1,
-    refetchToken0Balance,
-    refetchToken1Balance,
+    checkSufficientBalance,
+    mintWithApproval,
+    toast,
+    onPositionAdded,
   ]);
 
-  // 🔧 添加调试信息显示
-  const renderDebugInfo = () => {
-    if (process.env.NODE_ENV !== "development") return null;
+  // 条件检查
+  const canShowTokenInputs: boolean = !!(
+    selectedPair &&
+    selectedToken0 &&
+    selectedToken1
+  );
 
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
-        <div className="font-bold mb-2">🔍 调试信息:</div>
-        <div>selectedPair: {selectedPair ? "✅" : "❌"}</div>
-        <div>
-          selectedToken0:{" "}
-          {selectedToken0 ? `✅ ${selectedToken0.symbol}` : "❌"}
-        </div>
-        <div>
-          selectedToken1:{" "}
-          {selectedToken1 ? `✅ ${selectedToken1.symbol}` : "❌"}
-        </div>
-        <div>selectedPool: {selectedPool ? "✅" : "❌"}</div>
-        <div>address: {address ? "✅" : "❌"}</div>
-        <div>availableTokens: {availableTokens.length}</div>
-        <div>tradingPairs: {tradingPairs.length}</div>
-        <div>poolsInfo: {poolsInfo?.length || 0}</div>
-
-        {selectedPair && (
-          <div className="mt-2 p-2 bg-white rounded">
-            <div>Pair: {selectedPair.displayName}</div>
-            <div>Token0: {selectedPair.token0}</div>
-            <div>Token1: {selectedPair.token1}</div>
-            <div>Pools: {selectedPair.pools?.length || 0}</div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // 🔧 条件检查
-  const canShowTokenInputs = selectedPair && selectedToken0 && selectedToken1;
   console.log("🔍 显示代币输入框条件:", {
     selectedPair: !!selectedPair,
     selectedToken0: !!selectedToken0,
     selectedToken1: !!selectedToken1,
     canShowTokenInputs,
-    "poolPrice:": poolPrice,
-    selectedPoolInfo: selectedPoolInfo,
+    poolPrice: !!poolPrice,
+    selectedPoolInfo: !!selectedPoolInfo,
   });
 
-  return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>添加流动性</CardTitle>
-        <CardDescription>选择交易对并添加流动性以赚取手续费</CardDescription>
-      </CardHeader>
+  // 🔧 类型安全的重置函数
+  const handleReset = useCallback((): void => {
+    setAmount0("");
+    setAmount1("");
+    setSelectedPair(null);
+    setSelectedPool(null);
+    setSelectedToken0(undefined);
+    setSelectedToken1(undefined);
+    setFilteredPools([]);
+    setLowerPrice("");
+    setUpperPrice("");
+  }, []);
 
-      <CardContent className="space-y-6">
-        {/* 🔧 调试信息 */}
+  // 🔧 类型安全的最大值点击处理
+  const handleMaxClick0 = useCallback((): void => {
+    if (token0Balance) {
+      handleAmount0Change(token0Balance);
+    }
+  }, [token0Balance, handleAmount0Change]);
+
+  const handleMaxClick1 = useCallback((): void => {
+    if (token1Balance) {
+      handleAmount1Change(token1Balance);
+    }
+  }, [token1Balance, handleAmount1Change]);
+
+  return (
+    <div className={className}>
+      <div className="space-y-6">
+        {/* 调试信息 */}
         {/* {renderDebugInfo()} */}
 
-        {/* 🆕 钱包连接状态 */}
+        {/* 钱包连接状态 */}
         {!address && (
           <Alert>
             <AlertDescription>请先连接钱包以继续操作</AlertDescription>
@@ -476,7 +542,7 @@ const AddPosition: React.FC = () => {
         )}
 
         {/* 交易对选择器 */}
-        {tradingPairs.length > 0 && (
+        {tradingPairs.length > 0 && selectedPool && (
           <TradingPairSelector
             selectedPair={selectedPair}
             selectedPool={selectedPool}
@@ -497,6 +563,7 @@ const AddPosition: React.FC = () => {
             </Badge>
           </div>
         )}
+
         {/* 池子价格显示 */}
         {selectedPoolInfo && selectedToken0 && selectedToken1 && (
           <PoolPriceDisplay
@@ -514,9 +581,8 @@ const AddPosition: React.FC = () => {
         )}
 
         {/* 代币输入框 */}
-        {canShowTokenInputs ? (
+        {canShowTokenInputs && selectedToken0 ? (
           <div className="space-y-4">
-            <div className="text-green-600 text-sm">✅ 显示代币输入框</div>
             <TokenAmountInput
               label="第一个代币"
               value={amount0}
@@ -526,11 +592,7 @@ const AddPosition: React.FC = () => {
               balance={token0Balance}
               showBalance={true}
               showMaxButton={true}
-              onMaxClick={() => {
-                if (token0Balance) {
-                  handleAmount0Change(token0Balance);
-                }
-              }}
+              onMaxClick={handleMaxClick0}
               usdValue={0}
               showUsdValue={false}
               balanceLoading={token0BalanceLoading}
@@ -544,36 +606,36 @@ const AddPosition: React.FC = () => {
                 <span className="text-gray-500 font-bold">+</span>
               </div>
             </div>
-            <TokenAmountInput
-              label="第二个代币"
-              value={amount1}
-              onChange={handleAmount1Change}
-              selectedToken={selectedToken1}
-              availableTokens={[selectedToken1]}
-              balance={token1Balance}
-              balanceLoading={token1BalanceLoading}
-              showBalance={true}
-              showMaxButton={true}
-              onMaxClick={() => {
-                if (token1Balance) {
-                  handleAmount1Change(token1Balance);
-                }
-              }}
-              usdValue={0}
-              showUsdValue={false}
-              mode="input"
-              disabled={isSubmitting || priceLoading}
-              placeholder="0"
-              onTokenChange={setSelectedToken1}
-            />
-            <PriceCalculator
-              selectedPool={selectedPoolInfo}
-              token0={selectedToken0}
-              token1={selectedToken1}
-              amount0={amount0}
-              amount1={amount1}
-            />
-            {/* 🆕 价格区间设置 */}
+            {selectedToken1 && (
+              <TokenAmountInput
+                label="第二个代币"
+                value={amount1}
+                onChange={handleAmount1Change}
+                selectedToken={selectedToken1}
+                availableTokens={[selectedToken1]}
+                balance={token1Balance}
+                balanceLoading={token1BalanceLoading}
+                showBalance={true}
+                showMaxButton={true}
+                onMaxClick={handleMaxClick1}
+                usdValue={0}
+                showUsdValue={false}
+                mode="input"
+                disabled={isSubmitting || priceLoading}
+                placeholder="0"
+                onTokenChange={setSelectedToken1}
+              />
+            )}
+            {selectedPoolInfo && selectedToken0 && selectedToken1 && (
+              <PriceCalculator
+                selectedPool={selectedPoolInfo}
+                token0={selectedToken0}
+                token1={selectedToken1}
+                amount0={amount0}
+                amount1={amount1}
+              />
+            )}
+            {/* 价格区间设置 */}
             {poolPrice && (
               <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
@@ -630,7 +692,7 @@ const AddPosition: React.FC = () => {
                 </div>
               </div>
             )}
-            {/* 🆕 添加流动性预览 */}
+            {/* 添加流动性预览 */}
             {selectedPool && amount0 && amount1 && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
                 <div className="text-sm font-medium text-green-800">
@@ -669,9 +731,7 @@ const AddPosition: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="text-red-600 text-sm">
-            ❌ 无法显示代币输入框 - 检查上面的状态
-          </div>
+          <div className="text-sm text-gray-500 py-2">请选择交易对以继续</div>
         )}
 
         {/* 加载状态 */}
@@ -681,50 +741,41 @@ const AddPosition: React.FC = () => {
             <span>{isLoading ? "加载交易对中..." : "获取价格信息中..."}</span>
           </div>
         )}
-      </CardContent>
 
-      <CardFooter className="flex gap-2">
-        <Button
-          variant="outline"
-          className="flex-1"
-          onClick={() => {
-            setAmount0("");
-            setAmount1("");
-            setSelectedPair(null);
-            setSelectedPool(null);
-            setSelectedToken0(undefined);
-            setSelectedToken1(undefined);
-            setFilteredPools([]);
-            setLowerPrice("");
-            setUpperPrice("");
-          }}
-          disabled={isSubmitting}
-        >
-          重置
-        </Button>
-        <Button
-          className="flex-1"
-          onClick={handleAddLiquidity}
-          disabled={
-            !selectedPair ||
-            !selectedPool ||
-            !amount0 ||
-            !amount1 ||
-            isSubmitting ||
-            priceLoading ||
-            !address
-          }
-        >
-          {isSubmitting
-            ? "处理中..."
-            : priceLoading
-            ? "加载价格..."
-            : !address
-            ? "请连接钱包"
-            : "添加流动性"}
-        </Button>
-      </CardFooter>
-    </Card>
+        {/* 按钮区域 */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={handleReset}
+            disabled={isSubmitting}
+          >
+            重置
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleAddLiquidity}
+            disabled={
+              !selectedPair ||
+              !selectedPool ||
+              !amount0 ||
+              !amount1 ||
+              isSubmitting ||
+              priceLoading ||
+              !address
+            }
+          >
+            {isSubmitting
+              ? "处理中..."
+              : priceLoading
+              ? "加载价格..."
+              : !address
+              ? "请连接钱包"
+              : "添加流动性"}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -9,12 +9,12 @@ import {
 } from "./ui/select";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
-import { formatFeePercent, TradingPair, Pool } from "@/types/addPosition";
+import { formatFeePercent, TradingPair } from "@/types/addPosition";
 import { PoolInfo } from "@/store/usePoolManagerStore";
 
 interface TradingPairSelectorProps {
   selectedPair: TradingPair | null;
-  selectedPool: Pool | null;
+  selectedPool: PoolInfo | null;
   onPairSelect: (pair: TradingPair) => void;
   onPoolSelect: (pool: PoolInfo) => void;
   availablePairs: TradingPair[];
@@ -58,11 +58,11 @@ const TradingPairSelector: React.FC<TradingPairSelectorProps> = ({
       onPairSelect(pair);
 
       // 自动选择第一个池子
-      if (pair.pools && pair.pools.length > 0) {
+      if (pair.pools && pair.pools.length > 0 && pair.pools[0]) {
         console.log("🔍 自动选择池子:", pair.pools[0]);
         // 使用 setTimeout 确保 onPairSelect 先执行
         setTimeout(() => {
-          onPoolSelect(pair.pools[0]);
+          pair.pools && pair.pools[0] && onPoolSelect(pair.pools[0]);
         }, 0);
       }
     } else {
@@ -126,20 +126,28 @@ const TradingPairSelector: React.FC<TradingPairSelectorProps> = ({
             <SelectValue placeholder="选择交易对" />
           </SelectTrigger>
           <SelectContent>
-            {availablePairs.map((pair) => (
-              <SelectItem key={pair.id} value={pair.id}>
-                <div className="flex items-center justify-between w-full">
-                  <span>{pair.displayName}</span>
-                  <div className="flex gap-1 ml-2">
-                    {pair.pools?.map((pool, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {formatFeePercent(pool.fee)}
-                      </Badge>
-                    ))}
+            {availablePairs.map((pair) => {
+              return pair.id ? (
+                <SelectItem key={pair.id} value={pair.id}>
+                  <div className="flex items-center justify-between w-full">
+                    <span>{pair.displayName}</span>
+                    <div className="flex gap-1 ml-2">
+                      {pair.pools?.map((pool, index) => (
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          {formatFeePercent(pool.fee)}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </SelectItem>
-            ))}
+                </SelectItem>
+              ) : (
+                ""
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
