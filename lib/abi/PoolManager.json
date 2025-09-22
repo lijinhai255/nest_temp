@@ -1,0 +1,186 @@
+[
+  {
+    "name": "PoolCreated",
+    "type": "event",
+    "inputs": [
+      {
+        "name": "token0",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "token1",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "index",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      },
+      {
+        "name": "tickLower",
+        "type": "int24",
+        "indexed": false,
+        "internalType": "int24"
+      },
+      {
+        "name": "tickUpper",
+        "type": "int24",
+        "indexed": false,
+        "internalType": "int24"
+      },
+      {
+        "name": "fee",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      },
+      {
+        "name": "pool",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "name": "createAndInitializePoolIfNecessary",
+    "type": "function",
+    "inputs": [
+      {
+        "name": "params",
+        "type": "tuple",
+        "components": [
+          { "name": "token0", "type": "address", "internalType": "address" },
+          { "name": "token1", "type": "address", "internalType": "address" },
+          { "name": "fee", "type": "uint24", "internalType": "uint24" },
+          { "name": "tickLower", "type": "int24", "internalType": "int24" },
+          { "name": "tickUpper", "type": "int24", "internalType": "int24" },
+          {
+            "name": "sqrtPriceX96",
+            "type": "uint160",
+            "internalType": "uint160"
+          }
+        ],
+        "internalType": "struct IPoolManager.CreateAndInitializeParams"
+      }
+    ],
+    "outputs": [
+      { "name": "poolAddress", "type": "address", "internalType": "address" }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "name": "createPool",
+    "type": "function",
+    "inputs": [
+      { "name": "tokenA", "type": "address", "internalType": "address" },
+      { "name": "tokenB", "type": "address", "internalType": "address" },
+      { "name": "tickLower", "type": "int24", "internalType": "int24" },
+      { "name": "tickUpper", "type": "int24", "internalType": "int24" },
+      { "name": "fee", "type": "uint24", "internalType": "uint24" }
+    ],
+    "outputs": [
+      { "name": "pool", "type": "address", "internalType": "address" }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "name": "getAllPools",
+    "type": "function",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "poolsInfo",
+        "type": "tuple[]",
+        "components": [
+          { "name": "pool", "type": "address", "internalType": "address" },
+          { "name": "token0", "type": "address", "internalType": "address" },
+          { "name": "token1", "type": "address", "internalType": "address" },
+          { "name": "index", "type": "uint32", "internalType": "uint32" },
+          { "name": "fee", "type": "uint24", "internalType": "uint24" },
+          { "name": "feeProtocol", "type": "uint8", "internalType": "uint8" },
+          { "name": "tickLower", "type": "int24", "internalType": "int24" },
+          { "name": "tickUpper", "type": "int24", "internalType": "int24" },
+          { "name": "tick", "type": "int24", "internalType": "int24" },
+          {
+            "name": "sqrtPriceX96",
+            "type": "uint160",
+            "internalType": "uint160"
+          },
+          { "name": "liquidity", "type": "uint128", "internalType": "uint128" }
+        ],
+        "internalType": "struct IPoolManager.PoolInfo[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "name": "getPairs",
+    "type": "function",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "components": [
+          { "name": "token0", "type": "address", "internalType": "address" },
+          { "name": "token1", "type": "address", "internalType": "address" }
+        ],
+        "internalType": "struct IPoolManager.Pair[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "name": "getPool",
+    "type": "function",
+    "inputs": [
+      { "name": "tokenA", "type": "address", "internalType": "address" },
+      { "name": "tokenB", "type": "address", "internalType": "address" },
+      { "name": "index", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [{ "name": "", "type": "address", "internalType": "address" }],
+    "stateMutability": "view"
+  },
+  {
+    "name": "pairs",
+    "type": "function",
+    "inputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [
+      { "name": "token0", "type": "address", "internalType": "address" },
+      { "name": "token1", "type": "address", "internalType": "address" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "name": "parameters",
+    "type": "function",
+    "inputs": [],
+    "outputs": [
+      { "name": "factory", "type": "address", "internalType": "address" },
+      { "name": "tokenA", "type": "address", "internalType": "address" },
+      { "name": "tokenB", "type": "address", "internalType": "address" },
+      { "name": "tickLower", "type": "int24", "internalType": "int24" },
+      { "name": "tickUpper", "type": "int24", "internalType": "int24" },
+      { "name": "fee", "type": "uint24", "internalType": "uint24" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "name": "pools",
+    "type": "function",
+    "inputs": [
+      { "name": "", "type": "address", "internalType": "address" },
+      { "name": "", "type": "address", "internalType": "address" },
+      { "name": "", "type": "uint256", "internalType": "uint256" }
+    ],
+    "outputs": [{ "name": "", "type": "address", "internalType": "address" }],
+    "stateMutability": "view"
+  }
+]

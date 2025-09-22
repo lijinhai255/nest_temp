@@ -8,12 +8,24 @@ import {
   DetectedWallet,
   WalletConnectionResult,
 } from "@/types/provider";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import WalletConnectModal from "@/components/WalletConnectModal";
 import { projectId } from "@/wagmi";
 import { walletManager, initializeWallets } from "@/lib/walletManager";
-import { useAccount, useBalance, useChainId, useDisconnect } from "wagmi";
-import { formatEther } from "viem";
+import {
+  useAccount,
+  useBalance,
+  useChainId,
+  useDisconnect,
+  usePublicClient,
+} from "wagmi";
+import { formatEther, formatUnits } from "viem";
 
 // 导入工具函数
 import {
@@ -47,6 +59,14 @@ const WalletContext = createContext<WalletContextValue>({
   walletInstances: undefined,
   fetchBalance: async () => {},
   balanceLoading: false,
+  // 添加新的 getTokenBalance 方法的默认实现
+  getTokenBalance: async () => ({
+    balance: "0",
+    decimals: 18,
+    symbol: "",
+    loading: false,
+    error: "钱包未连接",
+  }),
 });
 
 const WalletProvider: React.FC<WalletProviderProps> = ({
@@ -84,6 +104,120 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
   const [currentWalletId, setCurrentWalletId] = useState("");
   // 🆕 新增 useDisconnect hook
   const { disconnect: wagmiDisconnect } = useDisconnect();
+  // 获取 wagmi 的 publicClient
+  const publicClient = usePublicClient();
+
+  // 创建 tokenBalanceCache 来缓存代币余额信息
+  const [tokenBalanceCache, setTokenBalanceCache] = useState<{
+    [tokenAddress: string]: {
+      balance: string;
+      decimals: number;
+      symbol: string;
+      lastUpdated: number;
+    };
+  }>({});
+  // 获取代币余额的方法
+  const getTokenBalance = useCallback(
+    async (tokenAddress: Address) => {
+      // 默认返回值
+      const defaultResult = {
+        balance: "0",
+        decimals: 18,
+        symbol: "",
+        loading: false,
+        error: null as string | null,
+      };
+
+      // 如果钱包未连接或地址为空，返回默认值
+      if (!state.isConnected || !state.address) {
+        return { ...defaultResult, error: "钱包未连接" };
+      }
+
+      // 如果没有 publicClient，返回默认值
+      if (!publicClient) {
+        return { ...defaultResult, error: "网络客户端未初始化" };
+      }
+
+      try {
+        // 设置加载状态
+        const loadingResult = { ...defaultResult, loading: true };
+
+        // 检查缓存
+        const cacheKey = `${tokenAddress.toLowerCase()}-${state.address.toLowerCase()}`;
+        const cachedData = tokenBalanceCache[cacheKey];
+        const now = Date.now();
+
+        // 如果缓存存在且未过期（30秒内），直接使用缓存
+        if (cachedData && now - cachedData.lastUpdated < 30000) {
+          return {
+            balance: cachedData.balance,
+            decimals: cachedData.decimals,
+            symbol: cachedData.symbol,
+            loading: false,
+            error: null,
+          };
+        }
+
+        // 并行获取代币信息
+        const [balanceResult, decimalsResult, symbolResult] = await Promise.all(
+          [
+            // 获取余额
+            publicClient.readContract({
+              address: tokenAddress,
+              abi: erc20ABI,
+              functionName: "balanceOf",
+              args: [state.address as `0x${string}`],
+            }),
+            // 获取小数位数
+            publicClient.readContract({
+              address: tokenAddress,
+              abi: erc20ABI,
+              functionName: "decimals",
+            }),
+            // 获取代币符号
+            publicClient.readContract({
+              address: tokenAddress,
+              abi: erc20ABI,
+              functionName: "symbol",
+            }),
+          ]
+        );
+
+        // 格式化余额
+        const decimals = Number(decimalsResult);
+        const balance = formatUnits(balanceResult as bigint, decimals);
+        const symbol = symbolResult as string;
+
+        // 更新缓存
+        setTokenBalanceCache((prev) => ({
+          ...prev,
+          [cacheKey]: {
+            balance,
+            decimals,
+            symbol,
+            lastUpdated: now,
+          },
+        }));
+
+        // 返回结果
+        return {
+          balance,
+          decimals,
+          symbol,
+          loading: false,
+          error: null,
+        };
+      } catch (error) {
+        console.error(`获取代币 ${tokenAddress} 余额失败:`, error);
+        return {
+          ...defaultResult,
+          error: error instanceof Error ? error.message : "获取代币余额失败",
+        };
+      }
+    },
+    [state.isConnected, state.address, publicClient, tokenBalanceCache]
+  );
+
   // 🆕 使用 wagmi 的 useBalance hook
   const {
     data: balanceData,
@@ -390,6 +524,7 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
     walletsLoading,
     fetchBalance, // 🆕 暴露余额刷新函数
     balanceLoading, // 🆕 暴露余额加载状态
+    getTokenBalance, // 添加新方法到上下文
   };
 
   return (

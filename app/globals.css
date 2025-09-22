@@ -19,6 +19,7 @@
     /* 使用品牌色的 HSL 值 */
     --primary: 340 82% 52%; /* #EE2B69 */
     --primary-foreground: 0 0% 100%; /* 白色文本 */
+    --primary-text-color: 0 0% 0%; /* 深色文本 */
     
     --secondary: 54 94% 62%; /* #FBE843 */
     --secondary-foreground: 0 0% 9%;

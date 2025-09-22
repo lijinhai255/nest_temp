@@ -161,6 +161,14 @@ detectedWallets?: DetectedWallet[];
 walletsLoading?: boolean;
 fetchBalance: () => Promise<void>;
 balanceLoading: boolean;
+  // 获取ERC20代币余额
+  getTokenBalance: (tokenAddress: Address) => Promise<{
+    balance: string;
+    decimals: number;
+    symbol: string;
+    loading: boolean;
+    error: string | null;
+  }>;
 }
 
 // 钱包创建函数类型
