@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import ConnectionButton from "./ConnectionButton";
-import { Button } from "./ui/button";
+import { ThemeToggle } from "./ThemeToggle";
 
 export default function Navbar() {
   return (
@@ -17,6 +17,7 @@ export default function Navbar() {
           <Link className="" href="/pool">
             <span>Pool</span>
           </Link>
+          <ThemeToggle />
 
           <ConnectionButton />
         </div>
