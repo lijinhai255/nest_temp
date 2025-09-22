@@ -21,63 +21,56 @@ import {
 } from "@/utils/poolFormatters";
 import { Address } from "viem";
 import AddPositionDialog from "@/components/AddPositionDialog";
+import {
+  getPositionStatus,
+  formatTokenAmount,
+  getStatusText,
+  getStatusColor,
+  PositionStatus,
+} from "@/utils/positionUtils";
 
-// 🆕 定义组件 Props 接口
-interface PositionsTableProps {
-  className?: string;
-  showAddButton?: boolean;
-  maxPositions?: number;
-  onPositionClick?: (position: PositionInfo) => void;
-  onPositionRemove?: (positionId: bigint) => Promise<void>;
-  onPositionCollect?: (positionId: bigint) => Promise<void>;
-}
+// 🆕 Define component Props interface
+interface PositionsTableProps {}
 
-// 🆕 定义加载状态类型
+// 🆕 Define loading state types
 type LoadingState = "idle" | "loading" | "success" | "error";
 
-// 🆕 定义错误类型 - 简化错误对象避免内存泄漏
+// 🆕 Define error types - simplified error object to avoid memory leaks
 interface PositionError {
   message: string;
   code?: string;
-  timestamp: number; // 添加时间戳用于清理
+  timestamp: number; // Add timestamp for cleanup
 }
 
-// 🆕 定义操作状态类型 - 使用 Map 替代 Set 以便清理
+// 🆕 Define operation state types - use Map instead of Set for easier cleanup
 interface OperationState {
-  isRemoving: Map<string, number>; // 值为时间戳
-  isCollecting: Map<string, number>; // 值为时间戳
+  isRemoving: Map<string, number>; // Value is timestamp
+  isCollecting: Map<string, number>; // Value is timestamp
   isAdding: boolean;
 }
 
-const PositionsTable: React.FC<PositionsTableProps> = ({
-  className = "",
-  showAddButton = true,
-  maxPositions,
-  onPositionClick,
-  onPositionRemove,
-  onPositionCollect,
-}) => {
+const PositionsTable: React.FC<PositionsTableProps> = () => {
   const { isConnected, address } = useWallet();
   const [isAddPositionOpen, setIsAddPositionOpen] = useState<boolean>(false);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [error, setError] = useState<PositionError | null>(null);
 
-  // 🔧 使用 Map 和时间戳管理操作状态
+  // 🔧 Use Map and timestamp to manage operation state
   const [operationState, setOperationState] = useState<OperationState>({
     isRemoving: new Map(),
     isCollecting: new Map(),
     isAdding: false,
   });
 
-  // 🆕 使用 ref 避免重复请求
+  // 🆕 Use ref to avoid duplicate requests
   const isLoadingRef = useRef<boolean>(false);
   const lastLoadTimeRef = useRef<number>(0);
   const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 🆕 组件卸载标志
+  // 🆕 Component unmount flag
   const isMountedRef = useRef<boolean>(true);
 
-  // 使用 position manager hook
+  // Use position manager hook
   const {
     mint,
     fetchAllPositions,
@@ -89,22 +82,44 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
     isLoading: hookLoading,
     error: hookError,
   } = usePositionManagerWithClients();
+  console.log("positions:", positions, "userPositions:", userPositions);
 
-  // 🆕 获取要显示的持仓列表 - 优化 useMemo 依赖
+  // 🆕 Get positions list to display - optimize useMemo dependencies
   const displayPositions: PositionInfo[] = React.useMemo(() => {
     const positionsToShow = address ? userPositions : positions;
-    return maxPositions
-      ? positionsToShow.slice(0, maxPositions)
-      : positionsToShow;
-  }, [positions, userPositions, address, maxPositions]);
+    return positionsToShow;
+  }, [positions, userPositions, address]);
 
-  // 🔧 优化错误处理 - 避免存储大对象
+  // 🆕 Enhanced position data with status information
+  const enhancedPositions = React.useMemo(() => {
+    return displayPositions.map((position) => ({
+      ...position,
+      ...getPositionStatus(position),
+    }));
+  }, [displayPositions]);
+
+  // 🆕 Status statistics
+  const statusStats = React.useMemo(() => {
+    const stats = enhancedPositions.reduce((acc, pos) => {
+      acc[pos.status] = (acc[pos.status] || 0) + 1;
+      return acc;
+    }, {} as Record<PositionStatus, number>);
+
+    return {
+      active: stats.active || 0,
+      pending_collection: stats.pending_collection || 0,
+      closed: stats.closed || 0,
+      total: enhancedPositions.length,
+    };
+  }, [enhancedPositions]);
+
+  // 🔧 Optimize error handling - avoid storing large objects
   const handleError = useCallback((error: unknown, operation: string): void => {
     if (!isMountedRef.current) return;
 
     console.error(`${operation} failed:`, error);
 
-    let errorMessage = `${operation} 失败`;
+    let errorMessage = `${operation} failed`;
     let errorCode: string | undefined;
 
     if (error instanceof Error) {
@@ -116,40 +131,40 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
       errorMessage = String(error.message);
     }
 
-    // 🔧 简化错误对象，避免存储完整的 error 对象
+    // 🔧 Simplified error object, avoid storing complete error object
     setError({
       message: errorMessage,
       code: errorCode,
       timestamp: Date.now(),
     });
 
-    // 🆕 自动清理错误状态
+    // 🆕 Auto cleanup error state
     setTimeout(() => {
       if (isMountedRef.current) {
         setError(null);
       }
-    }, 10000); // 10秒后自动清理错误
+    }, 10000); // Auto cleanup after 10 seconds
   }, []);
 
-  // 🔧 清除错误
+  // 🔧 Clear error
   const clearError = useCallback((): void => {
     if (isMountedRef.current) {
       setError(null);
     }
   }, []);
 
-  // 🔧 清理过期的操作状态
+  // 🔧 Cleanup expired operation state
   const cleanupOperationState = useCallback((): void => {
     if (!isMountedRef.current) return;
 
     const now = Date.now();
-    const CLEANUP_THRESHOLD = 5 * 60 * 1000; // 5分钟
+    const CLEANUP_THRESHOLD = 5 * 60 * 1000; // 5 minutes
 
     setOperationState((prev) => {
       const newRemoving = new Map(prev.isRemoving);
       const newCollecting = new Map(prev.isCollecting);
 
-      // 清理超过5分钟的操作记录
+      // Clean up operation records older than 5 minutes
       for (const [key, timestamp] of newRemoving.entries()) {
         if (now - timestamp > CLEANUP_THRESHOLD) {
           newRemoving.delete(key);
@@ -170,19 +185,19 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
     });
   }, []);
 
-  // 🔧 优化加载函数 - 防止重复调用
+  // 🔧 Optimize loading function - prevent duplicate calls
   const loadPositions = useCallback(async (): Promise<void> => {
     if (!isConnected || !isMountedRef.current) {
       setLoadingState("idle");
       return;
     }
 
-    // 防止重复请求
+    // Prevent duplicate requests
     if (isLoadingRef.current) {
       return;
     }
 
-    // 防止频繁请求（1秒内只允许一次）
+    // Prevent frequent requests (only allow once per second)
     const now = Date.now();
     if (now - lastLoadTimeRef.current < 1000) {
       return;
@@ -206,7 +221,7 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
     } catch (error) {
       if (isMountedRef.current) {
         setLoadingState("error");
-        handleError(error, "加载持仓");
+        handleError(error, "Load positions");
       }
     } finally {
       isLoadingRef.current = false;
@@ -220,16 +235,16 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
     clearError,
   ]);
 
-  // 🔧 优化 useEffect - 移除 loadPositions 依赖
+  // 🔧 Optimize useEffect - remove loadPositions dependency
   useEffect(() => {
     if (isConnected && address) {
       loadPositions();
     }
-  }, [isConnected, address]); // 只依赖必要的值
+  }, [isConnected, address]); // Only depend on necessary values
 
-  // 🆕 定期清理操作状态
+  // 🆕 Periodically cleanup operation state
   useEffect(() => {
-    cleanupTimeoutRef.current = setInterval(cleanupOperationState, 60000); // 每分钟清理一次
+    cleanupTimeoutRef.current = setInterval(cleanupOperationState, 60000); // Cleanup every minute
 
     return () => {
       if (cleanupTimeoutRef.current) {
@@ -238,7 +253,7 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
     };
   }, [cleanupOperationState]);
 
-  // 🆕 组件卸载时清理
+  // 🆕 Cleanup on component unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -248,7 +263,7 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
     };
   }, []);
 
-  // 🔧 优化处理添加持仓
+  // 🔧 Optimize handle add position
   const handleAddPosition = useCallback(
     async (params: MintParams): Promise<void> => {
       if (!isMountedRef.current) return;
@@ -259,28 +274,35 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
 
         await mint(params);
 
-        if (isMountedRef.current) {
-          await loadPositions();
-          setIsAddPositionOpen(false);
-        }
+        await loadPositions();
+        setIsAddPositionOpen(false);
       } catch (error) {
-        if (isMountedRef.current) {
-          handleError(error, "添加持仓");
-        }
+        handleError(error, "Add position");
         throw error;
       } finally {
-        if (isMountedRef.current) {
-          setOperationState((prev) => ({ ...prev, isAdding: false }));
-        }
+        setOperationState((prev) => ({ ...prev, isAdding: false }));
       }
     },
     [mint, loadPositions, handleError, clearError]
   );
 
-  // 🔧 优化处理移除持仓
+  // 🔧 Optimize handle remove position with status check
   const handleRemovePosition = useCallback(
     async (positionId: bigint): Promise<void> => {
-      if (!isMountedRef.current) return;
+      console.log("positionId", positionId);
+
+      // 🆕 Add status check
+      const position = displayPositions.find((p) => p.id === positionId);
+      if (!position) {
+        handleError(new Error("Position not found"), "Remove position");
+        return;
+      }
+
+      const statusInfo = getPositionStatus(position);
+      if (!statusInfo.canBurn) {
+        handleError(new Error("Position has no liquidity to burn"), "Remove position");
+        return;
+      }
 
       const positionIdStr = positionId.toString();
       const now = Date.now();
@@ -291,162 +313,66 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
           isRemoving: new Map([...prev.isRemoving, [positionIdStr, now]]),
         }));
         clearError();
+        await burn(positionId);
 
-        if (onPositionRemove) {
-          await onPositionRemove(positionId);
-        } else {
-          await burn(positionId);
-        }
-
-        if (isMountedRef.current) {
-          await loadPositions();
-        }
+        await loadPositions();
       } catch (error) {
-        if (isMountedRef.current) {
-          handleError(error, "移除持仓");
-        }
+        handleError(error, "Remove position");
       } finally {
-        if (isMountedRef.current) {
-          setOperationState((prev) => {
-            const newRemoving = new Map(prev.isRemoving);
-            newRemoving.delete(positionIdStr);
-            return { ...prev, isRemoving: newRemoving };
-          });
-        }
+        setOperationState((prev) => {
+          const newRemoving = new Map(prev.isRemoving);
+          newRemoving.delete(positionIdStr);
+          return { ...prev, isRemoving: newRemoving };
+        });
       }
     },
-    [burn, onPositionRemove, loadPositions, handleError, clearError]
+    [displayPositions, burn, loadPositions, handleError, clearError]
   );
 
-  // 🔧 优化处理收集手续费
+  // 🔧 Optimize handle collect fees with status check
   const handleCollectFees = useCallback(
     async (positionId: bigint): Promise<void> => {
-      if (!isMountedRef.current) return;
+      // 🆕 Add status check
+      const position = displayPositions.find((p) => p.id === positionId);
+      if (!position) {
+        handleError(new Error("Position not found"), "Collect fees");
+        return;
+      }
+
+      const statusInfo = getPositionStatus(position);
+      if (!statusInfo.canCollect) {
+        handleError(new Error("Position has no fees to collect"), "Collect fees");
+        return;
+      }
 
       const positionIdStr = positionId.toString();
       const now = Date.now();
 
+      setOperationState((prev) => ({
+        ...prev,
+        isCollecting: new Map([...prev.isCollecting, [positionIdStr, now]]),
+      }));
       try {
-        setOperationState((prev) => ({
-          ...prev,
-          isCollecting: new Map([...prev.isCollecting, [positionIdStr, now]]),
-        }));
         clearError();
 
-        if (onPositionCollect) {
-          await onPositionCollect(positionId);
-        } else if (address) {
-          await collect(positionId, address as unknown as Address);
-        } else {
-          throw new Error("钱包地址未连接");
-        }
-
-        if (isMountedRef.current) {
-          await loadPositions();
-        }
+        await collect(positionId, address as unknown as Address);
+        await loadPositions();
       } catch (error) {
-        if (isMountedRef.current) {
-          handleError(error, "收集手续费");
-        }
+        handleError(error, "Collect fees");
       } finally {
-        if (isMountedRef.current) {
-          setOperationState((prev) => {
-            const newCollecting = new Map(prev.isCollecting);
-            newCollecting.delete(positionIdStr);
-            return { ...prev, isCollecting: newCollecting };
-          });
-        }
+        setOperationState((prev) => {
+          const newCollecting = new Map(prev.isCollecting);
+          newCollecting.delete(positionIdStr);
+          return { ...prev, isCollecting: newCollecting };
+        });
       }
     },
-    [
-      collect,
-      onPositionCollect,
-      address,
-      loadPositions,
-      handleError,
-      clearError,
-    ]
+    [displayPositions, collect, address, loadPositions, handleError, clearError]
   );
 
-  // 处理持仓点击
-  const handlePositionClick = useCallback(
-    (position: PositionInfo): void => {
-      if (onPositionClick && isMountedRef.current) {
-        onPositionClick(position);
-      }
-    },
-    [onPositionClick]
-  );
-
-  // 渲染错误状态
-  const renderError = () => {
-    if (!error) return null;
-
-    return (
-      <TableRow>
-        <TableCell colSpan={5} className="text-center py-10">
-          <div className="text-red-600">
-            <div className="font-medium">❌ {error.message}</div>
-            {error.code && (
-              <div className="text-sm text-gray-500 mt-1">
-                错误代码: {error.code}
-              </div>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => {
-                clearError();
-                loadPositions();
-              }}
-            >
-              重试
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
-    );
-  };
-
-  // 渲染加载状态
-  const renderLoading = () => (
-    <TableRow>
-      <TableCell colSpan={5} className="text-center py-10">
-        <div className="flex items-center justify-center space-x-2">
-          <div className="w-4 h-4 border border-gray-300 border-t-transparent rounded-full animate-spin"></div>
-          <span>加载持仓中...</span>
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-
-  // 渲染空状态
-  const renderEmpty = () => (
-    <TableRow>
-      <TableCell colSpan={5} className="text-center py-10">
-        <div className="text-gray-500">
-          <div className="text-lg mb-2">📊 暂无持仓</div>
-          <div className="text-sm">
-            {isConnected ? "您还没有任何流动性持仓" : "请连接钱包查看持仓"}
-          </div>
-          {isConnected && showAddButton && (
-            <Button
-              className="mt-3"
-              onClick={() => setIsAddPositionOpen(true)}
-              disabled={operationState.isAdding}
-            >
-              添加第一个持仓
-            </Button>
-          )}
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-
-  // 渲染持仓行
+  // 🔧 Modified render position row using enhanced position data
   const renderPositionRow = (
-    position: PositionInfo,
+    position: PositionInfo & ReturnType<typeof getPositionStatus>,
     index: number
   ) => {
     const positionIdStr = position.id.toString();
@@ -456,8 +382,7 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
     return (
       <TableRow
         key={`${positionIdStr}-${index}`}
-        className={onPositionClick ? "cursor-pointer hover:bg-gray-50" : ""}
-        onClick={() => handlePositionClick(position)}
+        className={"cursor-pointer hover:bg-gray-50"}
       >
         <TableCell>
           {formatTokenPair(position.token0, position.token1)}
@@ -467,6 +392,39 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
           {formatPriceRange(position.tickLower, position.tickUpper)}
         </TableCell>
         <TableCell>{formatLiquidity(position.liquidity)}</TableCell>
+        {/* 🆕 Add status column */}
+        <TableCell>
+          <span
+            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+              position.status
+            )}`}
+          >
+            {getStatusText(position.status)}
+          </span>
+        </TableCell>
+        {/* 🆕 Add pending fees column */}
+        <TableCell>
+          <div className="text-xs space-y-1">
+            <div
+              className={
+                position.tokensOwed0 > 0n
+                  ? "text-green-600 font-medium"
+                  : "text-gray-400"
+              }
+            >
+              T0: {formatTokenAmount(position.tokensOwed0)}
+            </div>
+            <div
+              className={
+                position.tokensOwed1 > 0n
+                  ? "text-green-600 font-medium"
+                  : "text-gray-400"
+              }
+            >
+              T1: {formatTokenAmount(position.tokensOwed1)}
+            </div>
+          </div>
+        </TableCell>
         <TableCell>
           <div className="flex space-x-2">
             <Button
@@ -476,9 +434,13 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
                 e.stopPropagation();
                 handleRemovePosition(position.id);
               }}
-              disabled={isRemoving || isCollecting}
+              disabled={isRemoving || isCollecting || !position.canBurn}
+              title={position.canBurn ? "Burn position" : "No liquidity to burn"}
+              className={
+                !position.canBurn ? "opacity-50 cursor-not-allowed" : ""
+              }
             >
-              {isRemoving ? "移除中..." : "移除"}
+              {isRemoving ? "Removing..." : "Remove"}
             </Button>
             <Button
               variant="ghost"
@@ -487,9 +449,13 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
                 e.stopPropagation();
                 handleCollectFees(position.id);
               }}
-              disabled={isRemoving || isCollecting}
+              disabled={isRemoving || isCollecting || !position.canCollect}
+              title={position.canCollect ? "Collect fees" : "No fees to collect"}
+              className={
+                !position.canCollect ? "opacity-50 cursor-not-allowed" : ""
+              }
             >
-              {isCollecting ? "收集中..." : "收集"}
+              {isCollecting ? "Collecting..." : "Collect"}
             </Button>
           </div>
         </TableCell>
@@ -497,47 +463,72 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
     );
   };
 
-  // 渲染表格内容
-  const renderTableContent = ()=> {
-    if (loadingState === "loading" || hookLoading) {
-      return renderLoading();
-    }
-
-    if (error || hookError) {
-      return renderError();
-    }
-
-    if (displayPositions.length === 0) {
-      return renderEmpty();
-    }
-
-    return displayPositions.map((position, index) =>
+  // 🔧 Modified render table content using enhanced position data
+  const renderTableContent = () => {
+    return enhancedPositions.map((position, index) =>
       renderPositionRow(position, index)
     );
   };
 
   return (
-    <div className={className}>
+    <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">您的持仓</h2>
-        {isConnected && showAddButton && (
+        <div>
+          <h2 className="text-xl font-bold">Your Positions</h2>
+          {/* 🆕 Add status statistics */}
+          {statusStats.total > 0 && (
+            <div className="flex space-x-4 mt-2 text-sm">
+              <span className="text-green-600 font-medium">
+                Active: {statusStats.active}
+              </span>
+              <span className="text-yellow-600 font-medium">
+                Pending Collection: {statusStats.pending_collection}
+              </span>
+              <span className="text-gray-600 font-medium">
+                Closed: {statusStats.closed}
+              </span>
+              <span className="text-blue-600 font-medium">
+                Total: {statusStats.total}
+              </span>
+            </div>
+          )}
+        </div>
+        {isConnected && (
           <AddPositionDialog
             onPositionAdded={loadPositions}
-            triggerText={operationState.isAdding ? "添加中..." : "添加持仓"}
+            triggerText={operationState.isAdding ? "Adding..." : "Add Position"}
             triggerClassName={
               operationState.isAdding ? "opacity-50 cursor-not-allowed" : ""
             }
           />
         )}
       </div>
+
+      {/* 🆕 Display error message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <div className="flex justify-between items-center">
+            <span className="text-red-800 text-sm">{error.message}</span>
+            <button
+              onClick={clearError}
+              className="text-red-600 hover:text-red-800 text-sm underline"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>池子</TableHead>
-            <TableHead>费率等级</TableHead>
-            <TableHead>价格区间</TableHead>
-            <TableHead>流动性</TableHead>
-            <TableHead>操作</TableHead>
+            <TableHead>Pool</TableHead>
+            <TableHead>Fee Tier</TableHead>
+            <TableHead>Price Range</TableHead>
+            <TableHead>Liquidity</TableHead>
+            <TableHead>Status</TableHead> {/* 🆕 New status column */}
+            <TableHead>Pending Fees</TableHead> {/* 🆕 New pending fees column */}
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>{renderTableContent()}</TableBody>
@@ -545,11 +536,21 @@ const PositionsTable: React.FC<PositionsTableProps> = ({
 
       {displayPositions.length > 0 && (
         <div className="mt-4 text-sm text-gray-600 flex justify-between">
-          <span>显示 {displayPositions.length} 个持仓</span>
-          {maxPositions && positions.length > maxPositions && (
-            <span>共 {positions.length} 个持仓</span>
-          )}
+          <span>Showing {displayPositions.length} positions</span>
+          <span>Total {positions.length} positions</span>
         </div>
+      )}
+
+      {/* 🆕 Empty state display */}
+      {displayPositions.length === 0 && !hookLoading && (
+        <div className="text-center py-8 text-gray-500">
+          {isConnected ? "You don't have any positions yet" : "Please connect wallet to view positions"}
+        </div>
+      )}
+
+      {/* 🆕 Loading state display */}
+      {hookLoading && (
+        <div className="text-center py-8 text-gray-500">Loading...</div>
       )}
     </div>
   );
