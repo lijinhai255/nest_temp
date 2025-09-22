@@ -542,7 +542,7 @@ const AddPosition: React.FC<AddPositionProps> = ({
         )}
 
         {/* 交易对选择器 */}
-        {tradingPairs.length > 0 && selectedPool && (
+        {tradingPairs.length > 0 && (
           <TradingPairSelector
             selectedPair={selectedPair}
             selectedPool={selectedPool}

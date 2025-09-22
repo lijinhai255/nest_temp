@@ -15,7 +15,7 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("light");
 
   // 使用 useEffect 避免服务器端渲染不匹配问题
   useEffect(() => {
@@ -25,7 +25,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     if (savedTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.remove("light");
     }
   }, []);
 
