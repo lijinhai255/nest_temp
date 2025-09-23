@@ -19,7 +19,6 @@ export const useConnectButton = (
   onBalanceChange?: (balance: string) => void
 ) => {
   const wallet = useWallet();
-  console.log("wallet",wallet)
   const [state, setState] = useState<ConnectButtonState>({
     isChainSwitching: false,
     switchingChainId: null,

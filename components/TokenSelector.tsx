@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, Plus } from "lucide-react";
 import { Address } from "viem";
 import { isAddress } from "viem";
+import { getTokenInfo } from "@/types/addPosition";
 
 // 代币接口
 interface Token {
@@ -92,15 +93,15 @@ const TokenSelector = forwardRef<HTMLDivElement, TokenSelectorProps>(
       if (existingToken) {
         onTokenChange?.(existingToken);
       } else {
+        // 使用 getTokenInfo 获取代币信息
+        const tokenInfo = getTokenInfo(customAddress as Address);
+
         // 创建新代币对象
         const newToken: Token = {
           address: customAddress as Address,
-          symbol: `Token-${customAddress.substring(0, 4)}`,
-          name: `Custom Token ${customAddress.substring(
-            0,
-            6
-          )}...${customAddress.substring(38)}`,
-          decimals: 18, // 默认小数位
+          symbol: tokenInfo.symbol,
+          name: tokenInfo.name,
+          decimals: tokenInfo.decimals,
         };
 
         onTokenChange?.(newToken);
@@ -116,6 +117,33 @@ const TokenSelector = forwardRef<HTMLDivElement, TokenSelectorProps>(
       setShowAddressInput(false);
       setCustomAddress("");
       setAddressError("");
+    };
+
+    // 获取友好的地址显示
+    const getFormattedAddress = (address: string) => {
+      const tokenInfo = getTokenInfo(address as Address);
+      if (tokenInfo.name !== `Token ${address.substring(0, 8)}...`) {
+        return tokenInfo.name;
+      }
+      return `${address.substring(0, 6)}...${address.substring(38)}`;
+    };
+
+    // 格式化余额，控制小数点
+    const formatBalance = (balanceStr: string) => {
+      const num = parseFloat(balanceStr);
+      if (isNaN(num)) return "0";
+
+      // 如果是整数，不显示小数点
+      if (Number.isInteger(num)) return num.toString();
+
+      // 如果小数部分很小，限制到最多6位小数
+      const decimalPlaces =
+        num >= 1000 ? 2 : num >= 100 ? 3 : num >= 10 ? 4 : num >= 1 ? 5 : 6;
+
+      return num.toLocaleString(undefined, {
+        maximumFractionDigits: decimalPlaces,
+        minimumFractionDigits: 0,
+      });
     };
 
     return (
@@ -156,13 +184,16 @@ const TokenSelector = forwardRef<HTMLDivElement, TokenSelectorProps>(
               {showBalance && (
                 <div className="px-4 py-2 bg-gray-50 border-b flex items-center">
                   <div className="flex-1">
-                    <div className="text-lg font-medium">{balance}</div>
+                    <div className="text-lg font-medium">
+                      {formatBalance(balance)}
+                    </div>
                     <div className="text-xs text-gray-500">
-                      ${parseFloat(balance) * 1.2} {/* 模拟USD价值 */}
+                      ${formatBalance((parseFloat(balance) * 1.2).toString())}{" "}
+                      {/* 模拟USD价值 */}
                     </div>
                   </div>
                   <div className="text-sm text-gray-500">
-                    Balance: {balance}
+                    Balance: {formatBalance(balance)}
                   </div>
                 </div>
               )}
@@ -199,12 +230,9 @@ const TokenSelector = forwardRef<HTMLDivElement, TokenSelectorProps>(
                     )}
                     <SelectValue placeholder="选择代币">
                       {selectedToken
-                        ? `${
-                            selectedToken.symbol
-                          } - ${selectedToken.address.substring(
-                            0,
-                            6
-                          )}...${selectedToken.address.substring(38)}`
+                        ? `${selectedToken.symbol} - ${getFormattedAddress(
+                            selectedToken.address
+                          )}`
                         : "选择代币"}
                     </SelectValue>
                     <ChevronDown className="h-4 w-4" />
@@ -220,7 +248,7 @@ const TokenSelector = forwardRef<HTMLDivElement, TokenSelectorProps>(
                         <div>
                           <div className="font-medium">{token.symbol}</div>
                           <div className="text-xs text-gray-500 truncate max-w-[200px]">
-                            {token.address}
+                            {getFormattedAddress(token.address)}
                           </div>
                         </div>
                       </div>

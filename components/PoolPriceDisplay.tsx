@@ -61,7 +61,7 @@ const PoolPriceDisplay: React.FC<PoolPriceDisplayProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">
-            {(pool.fee / 10000).toFixed(2)}% 费率
+            {pool.fee.toFixed(2)}% 费率
           </Badge>
           {onRefresh && (
             <Button

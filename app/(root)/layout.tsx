@@ -5,6 +5,7 @@ import { chains, walletList } from "@/wagmi";
 import { useEffect, useState } from "react";
 import { ChainInfo, EthereumProvider, WalletGroup } from "@/types/provider";
 import Navbar from "@/components/Navbar";
+import { Toaster } from "@/provider/toaster";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [provider, setProvider] = useState<EthereumProvider | undefined>(
@@ -28,6 +29,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         >
           <Navbar />
           {children}
+          <Toaster />
         </WallerProvider>
       ) : (
         <div>{children}</div>

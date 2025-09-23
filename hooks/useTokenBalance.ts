@@ -157,7 +157,6 @@ export function useTokenBalance(tokenAddress?: Address) {
       setIsLoading(false);
     }
   };
-  console.log("useTokenBalance", { tokenAddress, balance, symbol, decimals, isLoading, error });
   
   return {
     balance,

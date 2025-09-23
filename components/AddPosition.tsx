@@ -13,10 +13,8 @@ import { Address, parseUnits } from "viem";
 import { Button } from "./ui/button";
 import TradingPairSelector from "./TradingPairSelector";
 
-import { Badge } from "./ui/badge";
 import { Alert, AlertDescription } from "./ui/alert";
 import TokenAmountInput from "./TokenAmountInput";
-import PoolPriceDisplay from "./PoolPriceDisplay";
 import {
   formatFeePercent,
   TradingPair,
@@ -38,6 +36,7 @@ import { useWallet } from "@/provider";
 import { useToast } from "@/hooks/use-toast";
 import { PoolInfo } from "@/store/usePoolManagerStore";
 import { ZodNullable } from "zod";
+import { SelectPoolFee } from "./SelectPoolFee";
 
 // 🆕 定义调试信息的类型
 interface DebugInfo {
@@ -95,7 +94,7 @@ const AddPosition: React.FC<AddPositionProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [selectedToken0, setSelectedToken0] = useState<Token | undefined>();
   const [selectedToken1, setSelectedToken1] = useState<Token | undefined>();
-
+  const [collectAllPools, setCollectAllPools] = useState<PoolInfo[]>();
   // 添加价格区间状态
   const [lowerPrice, setLowerPrice] = useState<string>("");
   const [upperPrice, setUpperPrice] = useState<string>("");
@@ -281,10 +280,11 @@ const AddPosition: React.FC<AddPositionProps> = ({
     }, 100);
   }, []);
 
-  const handlePoolSelect = useCallback((pool: PoolInfo): void => {
+  const handlePoolSelect = useCallback((pool: PoolInfo[]): void => {
     console.log("🔍 AddPosition 收到池子选择:", pool);
-    if (mountedRef.current && pool) {
-      setSelectedPool(pool);
+    if (pool) {
+      setCollectAllPools(pool);
+      setSelectedPool(pool[0]);
     }
   }, []);
 
@@ -527,6 +527,11 @@ const AddPosition: React.FC<AddPositionProps> = ({
       handleAmount1Change(token1Balance);
     }
   }, [token1Balance, handleAmount1Change]);
+  const onSelectPool = (pools) => {
+    if (pools) {
+      setSelectedPool(pools);
+    }
+  };
 
   return (
     <div className={className}>
@@ -555,30 +560,14 @@ const AddPosition: React.FC<AddPositionProps> = ({
         )}
 
         {/* 显示选中池子的费率信息 */}
-        {selectedPool && (
-          <div className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded-md">
-            <span>交易费率:</span>
-            <Badge variant="secondary">
-              {formatFeePercent(selectedPool.fee)}
-            </Badge>
-          </div>
-        )}
-
-        {/* 池子价格显示 */}
-        {selectedPoolInfo && selectedToken0 && selectedToken1 && (
-          <PoolPriceDisplay
-            pool={selectedPoolInfo}
-            token0={{
-              symbol: selectedToken0.symbol,
-              decimals: selectedToken0.decimals,
-            }}
-            token1={{
-              symbol: selectedToken1.symbol,
-              decimals: selectedToken1.decimals,
-            }}
-            onRefresh={loadData}
-          />
-        )}
+        <SelectPoolFee
+          selectedPool={selectedPool}
+          selectedToken0={selectedToken0 || null}
+          selectedToken1={selectedToken1 || null}
+          loadData={loadData}
+          collectAllPools={collectAllPools || undefined}
+          onSelectPool={onSelectPool}
+        />
 
         {/* 代币输入框 */}
         {canShowTokenInputs && selectedToken0 ? (

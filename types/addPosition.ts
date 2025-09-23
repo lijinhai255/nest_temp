@@ -68,11 +68,16 @@ export const TOKEN_INFO: Record<string, { symbol: string; name: string; decimals
     name: "My Token A", 
     decimals: 18 
   },
+  "0xbe04b4418BF39066628CCf1e7f8f0aEcC8139E6F": { 
+    symbol: "MyTokenB", 
+    name:"My Token B",
+    decimals: 18
+  },
 };
 
 // 工具函数
 export const formatFeePercent = (fee: number): string => {
-  return `${fee}%`;
+  return `${(fee / 100).toFixed(2)}%`;
 };
 
 export const getTokenInfo = (address: Address): { symbol: string; name: string; decimals: number } => {

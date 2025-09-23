@@ -1,3 +1,6 @@
+import { getTokenInfo } from '@/types/addPosition';
+import { Address } from 'viem';
+
 /**
  * 池子数据格式化工具函数
  */
@@ -28,20 +31,15 @@ export const formatFee = (fee: number): string => {
  * @param token1 第二个代币地址
  * @returns 格式化后的代币对字符串
  */
-export const formatTokenPair = (token0: string, token1: string): string => {
+export const formatTokenPair = (token0: Address, token1: Address): string => {
   if (!token0 || !token1) return 'Unknown Pair';
   
   try {
-    // 简化显示地址
-    const shortToken0 = token0.length > 10 
-      ? `${token0.substring(0, 6)}...${token0.substring(Math.max(0, token0.length - 4))}`
-      : token0;
-      
-    const shortToken1 = token1.length > 10
-      ? `${token1.substring(0, 6)}...${token1.substring(Math.max(0, token1.length - 4))}`
-      : token1;
-      
-    return `${shortToken0} / ${shortToken1}`;
+    // 使用 getTokenInfo 获取代币符号
+    const token0Info = getTokenInfo(token0);
+    const token1Info = getTokenInfo(token1);
+    
+    return `${token0Info.symbol} / ${token1Info.symbol}`;
   } catch (error) {
     console.error("Error formatting token pair:", error);
     return 'Error formatting';
@@ -106,3 +104,23 @@ export const formatLiquidity = (liquidity: bigint): string => {
       }
 
 // 封装一个方法      
+
+// 格式化余额，控制小数点
+export const formatBalance = (balanceStr: string) => {
+  const num = parseFloat(balanceStr);
+  if (isNaN(num)) return "0";
+  
+  // 如果是整数，不显示小数点
+  if (Number.isInteger(num)) return num.toString();
+  
+  // 如果小数部分很小，限制到最多6位小数
+  const decimalPlaces = num >= 1000 ? 2 : 
+                       num >= 100 ? 3 : 
+                       num >= 10 ? 4 : 
+                       num >= 1 ? 5 : 6;
+                       
+  return num.toLocaleString(undefined, {
+    maximumFractionDigits: decimalPlaces,
+    minimumFractionDigits: 0
+  });
+};

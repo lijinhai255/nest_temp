@@ -46,8 +46,8 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
   const [isCreatePoolOpen, setIsCreatePoolOpen] = useState(false);
   const { isConnected } = useWallet();
 
-  const { fetchAllPools, poolsInfo, createAndInitializePoolIfNecessary } =
-    usePoolManagerWithClients();
+  const { fetchAllPools, poolsInfo } = usePoolManagerWithClients();
+    console.log("poolsInfo", poolsInfo);
 
   // 添加 handlePoolCreated 函数，使用 createAndInitializePoolIfNecessary
   const handlePoolCreated = async () => {

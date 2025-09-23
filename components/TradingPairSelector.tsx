@@ -16,7 +16,7 @@ interface TradingPairSelectorProps {
   selectedPair: TradingPair | null;
   selectedPool: PoolInfo | null;
   onPairSelect: (pair: TradingPair) => void;
-  onPoolSelect: (pool: PoolInfo) => void;
+  onPoolSelect: (pool: PoolInfo[]) => void;
   availablePairs: TradingPair[];
   availablePools: PoolInfo[];
   disabled?: boolean;
@@ -62,7 +62,7 @@ const TradingPairSelector: React.FC<TradingPairSelectorProps> = ({
         console.log("🔍 自动选择池子:", pair.pools[0]);
         // 使用 setTimeout 确保 onPairSelect 先执行
         setTimeout(() => {
-          pair.pools && pair.pools[0] && onPoolSelect(pair.pools[0]);
+          pair.pools && onPoolSelect(pair.pools);
         }, 0);
       }
     } else {

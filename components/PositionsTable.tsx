@@ -28,6 +28,14 @@ import {
   getStatusColor,
   PositionStatus,
 } from "@/utils/positionUtils";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 // 🆕 Define component Props interface
 
@@ -69,6 +77,10 @@ const PositionsTable: React.FC = () => {
   // 🆕 Component unmount flag
   const isMountedRef = useRef<boolean>(true);
 
+  // 🆕 添加分页相关状态
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(10); // 每页显示10条记录
+
   // Use position manager hook
   const {
     mint,
@@ -96,6 +108,31 @@ const PositionsTable: React.FC = () => {
       ...getPositionStatus(position),
     }));
   }, [displayPositions]);
+
+  // 🆕 计算分页信息
+  const paginatedPositions = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(
+      startIndex + itemsPerPage,
+      enhancedPositions.length
+    );
+    return enhancedPositions.slice(startIndex, endIndex);
+  }, [enhancedPositions, currentPage, itemsPerPage]);
+
+  // 🆕 计算总页数和分页信息
+  const paginationInfo = React.useMemo(() => {
+    const total = enhancedPositions.length;
+    const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage - 1, total - 1);
+
+    return {
+      total,
+      totalPages,
+      startIndex,
+      endIndex: total > 0 ? endIndex : 0,
+    };
+  }, [enhancedPositions.length, currentPage, itemsPerPage]);
 
   // 🆕 Status statistics
   const statusStats = React.useMemo(() => {
@@ -186,13 +223,8 @@ const PositionsTable: React.FC = () => {
 
   // 🔧 Optimize loading function - prevent duplicate calls
   const loadPositions = useCallback(async (): Promise<void> => {
-    if (!isConnected || !isMountedRef.current) {
+    if (!isConnected) {
       setLoadingState("idle");
-      return;
-    }
-
-    // Prevent duplicate requests
-    if (isLoadingRef.current) {
       return;
     }
 
@@ -213,10 +245,9 @@ const PositionsTable: React.FC = () => {
       } else {
         await fetchAllPositions();
       }
-
-      if (isMountedRef.current) {
-        setLoadingState("success");
-      }
+      setLoadingState("success");
+      // 重置当前页为第一页
+      setCurrentPage(1);
     } catch (error) {
       if (isMountedRef.current) {
         setLoadingState("error");
@@ -261,29 +292,6 @@ const PositionsTable: React.FC = () => {
       }
     };
   }, []);
-
-  // 🔧 Optimize handle add position
-  const handleAddPosition = useCallback(
-    async (params: MintParams): Promise<void> => {
-      if (!isMountedRef.current) return;
-
-      try {
-        setOperationState((prev) => ({ ...prev, isAdding: true }));
-        clearError();
-
-        await mint(params);
-
-        await loadPositions();
-        setIsAddPositionOpen(false);
-      } catch (error) {
-        handleError(error, "Add position");
-        throw error;
-      } finally {
-        setOperationState((prev) => ({ ...prev, isAdding: false }));
-      }
-    },
-    [mint, loadPositions, handleError, clearError]
-  );
 
   // 🔧 Optimize handle remove position with status check
   const handleRemovePosition = useCallback(
@@ -472,9 +480,9 @@ const PositionsTable: React.FC = () => {
     );
   };
 
-  // 🔧 Modified render table content using enhanced position data
+  // 🔧 Modified render table content using paginated position data
   const renderTableContent = () => {
-    return enhancedPositions.map((position, index) =>
+    return paginatedPositions.map((position, index) =>
       renderPositionRow(position, index)
     );
   };
@@ -544,15 +552,56 @@ const PositionsTable: React.FC = () => {
         <TableBody>{renderTableContent()}</TableBody>
       </Table>
 
-      {displayPositions.length > 0 && (
-        <div className="mt-4 text-sm text-gray-600 flex justify-between">
-          <span>Showing {displayPositions.length} positions</span>
-          <span>Total {positions.length} positions</span>
+      {/* 替换为分页组件 */}
+      {!hookLoading && enhancedPositions.length > 0 && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-gray-500">
+            {paginationInfo.startIndex + 1}-{paginationInfo.endIndex + 1} of{" "}
+            {paginationInfo.total} items
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  aria-disabled={currentPage === 1}
+                  className={
+                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                  }
+                />
+              </PaginationItem>
+
+              {/* 可以根据需要添加页码按钮 */}
+              <PaginationItem>
+                <PaginationLink isActive>{currentPage}</PaginationLink>
+              </PaginationItem>
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() =>
+                    setCurrentPage((p) =>
+                      Math.min(paginationInfo.totalPages, p + 1)
+                    )
+                  }
+                  aria-disabled={
+                    currentPage === paginationInfo.totalPages ||
+                    paginationInfo.totalPages === 0
+                  }
+                  className={
+                    currentPage === paginationInfo.totalPages ||
+                    paginationInfo.totalPages === 0
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 
-      {/* 🆕 Empty state display */}
-      {displayPositions.length === 0 && !hookLoading && (
+      {/* 空状态显示 */}
+      {enhancedPositions.length === 0 && !hookLoading && (
         <div className="text-center py-8 text-gray-500">
           {isConnected
             ? "You don't have any positions yet"
@@ -560,7 +609,7 @@ const PositionsTable: React.FC = () => {
         </div>
       )}
 
-      {/* 🆕 Loading state display */}
+      {/* 加载状态显示 */}
       {hookLoading && (
         <div className="text-center py-8 text-gray-500">Loading...</div>
       )}
