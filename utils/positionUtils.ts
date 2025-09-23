@@ -1,5 +1,5 @@
 // utils/positionUtils.ts
-import { PositionInfo } from '@/stores/usePositionManagerStore';
+import { PositionInfo } from '@/store/usePositionManagerStore';
 
 export type PositionStatus = 'active' | 'closed' | 'pending_collection';
 

@@ -30,7 +30,6 @@ import {
 } from "@/utils/positionUtils";
 
 // 🆕 Define component Props interface
-interface PositionsTableProps {}
 
 // 🆕 Define loading state types
 type LoadingState = "idle" | "loading" | "success" | "error";
@@ -49,7 +48,7 @@ interface OperationState {
   isAdding: boolean;
 }
 
-const PositionsTable: React.FC<PositionsTableProps> = () => {
+const PositionsTable: React.FC = () => {
   const { isConnected, address } = useWallet();
   const [isAddPositionOpen, setIsAddPositionOpen] = useState<boolean>(false);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
@@ -300,7 +299,10 @@ const PositionsTable: React.FC<PositionsTableProps> = () => {
 
       const statusInfo = getPositionStatus(position);
       if (!statusInfo.canBurn) {
-        handleError(new Error("Position has no liquidity to burn"), "Remove position");
+        handleError(
+          new Error("Position has no liquidity to burn"),
+          "Remove position"
+        );
         return;
       }
 
@@ -341,7 +343,10 @@ const PositionsTable: React.FC<PositionsTableProps> = () => {
 
       const statusInfo = getPositionStatus(position);
       if (!statusInfo.canCollect) {
-        handleError(new Error("Position has no fees to collect"), "Collect fees");
+        handleError(
+          new Error("Position has no fees to collect"),
+          "Collect fees"
+        );
         return;
       }
 
@@ -435,7 +440,9 @@ const PositionsTable: React.FC<PositionsTableProps> = () => {
                 handleRemovePosition(position.id);
               }}
               disabled={isRemoving || isCollecting || !position.canBurn}
-              title={position.canBurn ? "Burn position" : "No liquidity to burn"}
+              title={
+                position.canBurn ? "Burn position" : "No liquidity to burn"
+              }
               className={
                 !position.canBurn ? "opacity-50 cursor-not-allowed" : ""
               }
@@ -450,7 +457,9 @@ const PositionsTable: React.FC<PositionsTableProps> = () => {
                 handleCollectFees(position.id);
               }}
               disabled={isRemoving || isCollecting || !position.canCollect}
-              title={position.canCollect ? "Collect fees" : "No fees to collect"}
+              title={
+                position.canCollect ? "Collect fees" : "No fees to collect"
+              }
               className={
                 !position.canCollect ? "opacity-50 cursor-not-allowed" : ""
               }
@@ -527,7 +536,8 @@ const PositionsTable: React.FC<PositionsTableProps> = () => {
             <TableHead>Price Range</TableHead>
             <TableHead>Liquidity</TableHead>
             <TableHead>Status</TableHead> {/* 🆕 New status column */}
-            <TableHead>Pending Fees</TableHead> {/* 🆕 New pending fees column */}
+            <TableHead>Pending Fees</TableHead>{" "}
+            {/* 🆕 New pending fees column */}
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -544,7 +554,9 @@ const PositionsTable: React.FC<PositionsTableProps> = () => {
       {/* 🆕 Empty state display */}
       {displayPositions.length === 0 && !hookLoading && (
         <div className="text-center py-8 text-gray-500">
-          {isConnected ? "You don't have any positions yet" : "Please connect wallet to view positions"}
+          {isConnected
+            ? "You don't have any positions yet"
+            : "Please connect wallet to view positions"}
         </div>
       )}
 
