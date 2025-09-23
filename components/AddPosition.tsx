@@ -527,7 +527,7 @@ const AddPosition: React.FC<AddPositionProps> = ({
       handleAmount1Change(token1Balance);
     }
   }, [token1Balance, handleAmount1Change]);
-  const onSelectPool = (pools) => {
+  const onSelectPool = (pools: PoolInfo) => {
     if (pools) {
       setSelectedPool(pools);
     }
