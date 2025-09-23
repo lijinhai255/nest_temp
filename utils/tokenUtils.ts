@@ -1,50 +1,5 @@
-// types/addPosition.ts - 更新类型定义
-import { PoolInfo } from '@/store/usePoolManagerStore';
+// utils/tokenUtils.ts
 import { Address } from 'viem';
-
-// 基础代币接口
-export interface Token {
-  address: Address;
-  symbol: string;
-  name: string;
-  decimals: number;
-  logoUrl?: string;
-  isNative?: boolean;
-}
-
-// 池子接口
-export interface Pool {
-  id?: string;
-  pool?: Address; // 兼容原有字段
-  address?: Address; // 新字段
-  token0: Address;
-  token1: Address;
-  fee: number;
-  liquidity?: string;
-  sqrtPriceX96?: string;
-  tick?: number;
-  token0Price?: number;
-  token1Price?: number;
-  tvlUSD?: number;
-  volume24hUSD?: number;
-  feeTier?: string;
-}
-
-// 交易对接口 - 统一使用这个
-export interface TradingPair {
-  id?: string;
-token0: Address; // 保持与原有 Pair 兼容
-  token1: Address; // 保持与原有 Pair 兼容
-  fee?: number;
-  pools?: PoolInfo[];
-  displayName?: string;
-  // 扩展字段
-  token0Info?: Token;
-  token1Info?: Token;
-}
-
-// 为了向后兼容，保留 Pair 类型但指向 TradingPair
-export type Pair = TradingPair;
 
 // 代币信息配置
 export const TOKEN_INFO: Record<string, { symbol: string; name: string; decimals: number }> = {
@@ -70,16 +25,28 @@ export const TOKEN_INFO: Record<string, { symbol: string; name: string; decimals
   },
   "0xbe04b4418BF39066628CCf1e7f8f0aEcC8139E6F": { 
     symbol: "MyTokenB", 
-    name:"My Token B",
+    name: "My Token B",
     decimals: 18
+  },
+  // 添加你现有的代币
+  "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2": {
+    symbol: "WETH",
+    name: "Wrapped Ethereum",
+    decimals: 18
+  },
+  "0xdAC17F958D2ee523a2206206994597C13D831ec7": {
+    symbol: "USDT",
+    name: "Tether USD",
+    decimals: 6
+  },
+  "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599": {
+    symbol: "WBTC",
+    name: "Wrapped Bitcoin",
+    decimals: 8
   },
 };
 
-// 工具函数
-export const formatFeePercent = (fee: number): string => {
-  return `${(fee / 100).toFixed(2)}%`;
-};
-
+// 获取代币信息
 export const getTokenInfo = (address: Address): { symbol: string; name: string; decimals: number; isNative: boolean } => {
   const info = TOKEN_INFO[address] || {
     symbol: `${address.substring(0, 6)}...`,
@@ -92,6 +59,7 @@ export const getTokenInfo = (address: Address): { symbol: string; name: string; 
   
   return { ...info, isNative };
 };
+
 // 获取友好的地址显示
 export const getFormattedAddress = (address: string) => {
   const tokenInfo = getTokenInfo(address as Address);
@@ -111,4 +79,31 @@ export const getTokenDisplayName = (address: string) => {
 export const isNativeToken = (address: string): boolean => {
   return address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" || 
          address === "0x0000000000000000000000000000000000000000";
+};
+
+// 获取代币图标
+export const getTokenIcon = (address: string): string => {
+  const tokenInfo = getTokenInfo(address as Address);
+  
+  // 根据代币类型返回不同图标
+  if (tokenInfo.isNative) return "⟠";
+  if (tokenInfo.symbol === "USDT") return "₮";
+  if (tokenInfo.symbol === "WBTC") return "₿";
+  if (tokenInfo.symbol.includes("MyToken")) return "🪙";
+  
+  return "🔵"; // 默认图标
+};
+
+// 获取代币颜色
+export const getTokenColor = (address: string): string => {
+  const tokenInfo = getTokenInfo(address as Address);
+  
+  if (tokenInfo.isNative) return "bg-blue-600";
+  if (tokenInfo.symbol === "USDT") return "bg-green-600";
+  if (tokenInfo.symbol === "WBTC") return "bg-orange-500";
+  if (tokenInfo.symbol === "MyTokenA") return "bg-purple-600";
+  if (tokenInfo.symbol === "MyTokenB") return "bg-pink-600";
+  if (tokenInfo.symbol === "MyTokenC") return "bg-indigo-600";
+  
+  return "bg-gray-600"; // 默认颜色
 };

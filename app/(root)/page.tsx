@@ -1,3 +1,9 @@
+import SwapComponent from "@/components/SwapCom";
+
 export default function Home() {
-  return <main>Swap</main>;
+  return (
+    <main>
+      <SwapComponent />
+    </main>
+  );
 }

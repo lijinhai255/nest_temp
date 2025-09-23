@@ -161,6 +161,7 @@ const AddPosition: React.FC<AddPositionProps> = ({
       };
     });
   }, [pairs, poolsInfo]);
+  console.log("tradingPairs", tradingPairs);
 
   // 获取可用代币
   const memoizedAvailableTokens = useMemo((): Token[] => {

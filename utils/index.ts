@@ -25,3 +25,13 @@ export const getContractAddress = (networkId: number) => {
       throw new Error(`Network with id ${networkId} not supported`);
   }
 };
+
+// 辅助函数：验证地址是否有效
+export const isValidAddress=(address: string | Address | null | undefined): boolean =>{
+  if (!address) return false;
+  if (address === '0x') return false;
+  
+  // 检查地址格式是否正确（42个字符，包括"0x"前缀）
+  const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+  return addressRegex.test(address.toString());
+}
