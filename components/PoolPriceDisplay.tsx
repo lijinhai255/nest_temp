@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { usePoolPrice } from "@/hooks/usePoolPrice";
 import { PoolInfo } from "@/store/usePoolManagerStore";
+import { formatFeePercent } from "@/types/addPosition";
 
 interface PoolPriceDisplayProps {
   pool?: PoolInfo;
@@ -61,7 +62,7 @@ const PoolPriceDisplay: React.FC<PoolPriceDisplayProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">
-            {pool.fee.toFixed(2)}% 费率
+            {formatFeePercent(pool.fee)}% 费率
           </Badge>
           {onRefresh && (
             <Button

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ArrowDown } from "lucide-react";
 import { Token } from "@/hooks/useTokenOptions";
+import { PoolInfo } from "@/store/usePoolManagerStore";
 
 interface SwapPanelProps {
   token0: Token | null;
@@ -32,8 +33,9 @@ interface SwapPanelProps {
   availableTokensForOutput: Token[];
   setToken0: (token: Token | null) => void;
   setToken1: (token: Token | null) => void;
-  focusedInput: 'input' | 'output' | null;
-  setFocusedInput: (value: 'input' | 'output' | null) => void;
+  focusedInput: "input" | "output" | null;
+  setFocusedInput: (value: "input" | "output" | null) => void;
+  selectPool: PoolInfo;
 }
 
 const SwapPanel: React.FC<SwapPanelProps> = ({
@@ -50,37 +52,41 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
   setToken1,
   focusedInput,
   setFocusedInput,
+  selectPool,
 }) => {
   // 获取输入文本颜色
-  const getInputTextColor = useCallback((
-    amount: string,
-    token: Token | null,
-    isInputField: boolean
-  ) => {
-    if (!amount || !token || !isInputField) {
+  const getInputTextColor = useCallback(
+    (amount: string, token: Token | null, isInputField: boolean) => {
+      if (!amount || !token || !isInputField) {
+        return "text-foreground";
+      }
+
+      const amountValue = parseFloat(amount);
+      const balanceValue = parseFloat(token.balance);
+
+      if (amountValue > balanceValue) {
+        return "text-red-500 animate-pulse";
+      }
+
+      if (amountValue > balanceValue * 0.8) {
+        return "text-orange-500";
+      }
+
       return "text-foreground";
-    }
-
-    const amountValue = parseFloat(amount);
-    const balanceValue = parseFloat(token.balance);
-
-    if (amountValue > balanceValue) {
-      return "text-red-500 animate-pulse";
-    }
-
-    if (amountValue > balanceValue * 0.8) {
-      return "text-orange-500";
-    }
-
-    return "text-foreground";
-  }, []);
+    },
+    []
+  );
 
   return (
     <div className="space-y-4">
       {/* 输入代币 */}
-      <Card className={`transition-all duration-200 ${
-        focusedInput === 'input' ? 'ring-2 ring-blue-500 shadow-lg' : 'hover:shadow-md'
-      }`}>
+      <Card
+        className={`transition-all duration-200 ${
+          focusedInput === "input"
+            ? "ring-2 ring-blue-500 shadow-lg"
+            : "hover:shadow-md"
+        }`}
+      >
         <CardContent className="p-4">
           <div className="space-y-3">
             <div className="flex justify-between items-center">
@@ -101,19 +107,23 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
                 </div>
               )}
             </div>
-            
+
             <div className="flex space-x-3">
               <div className="flex-1">
                 <Input
                   type="text"
                   placeholder="0.0"
                   value={inputAmount}
-                  onChange={(e) => handleInputChange(e.target.value, true)}
-                  onFocus={() => setFocusedInput('input')}
+                  onChange={(e) =>
+                    handleInputChange(e.target.value, true, selectPool)
+                  }
+                  onFocus={() => setFocusedInput("input")}
                   onBlur={() => setFocusedInput(null)}
-                  className={`text-right text-xl font-bold border-0 bg-transparent focus:ring-0 ${
-                    getInputTextColor(inputAmount, token0, true)
-                  }`}
+                  className={`text-right text-xl font-bold border-0 bg-transparent focus:ring-0 ${getInputTextColor(
+                    inputAmount,
+                    token0,
+                    true
+                  )}`}
                 />
                 {inputAmount && token0 && (
                   <div className="text-right text-sm text-gray-500 mt-1">
@@ -121,11 +131,13 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
                   </div>
                 )}
               </div>
-              
+
               <Select
                 value={token0?.address || ""}
                 onValueChange={(value) => {
-                  const selectedToken = availableTokensForInput.find(token => token.address === value);
+                  const selectedToken = availableTokensForInput.find(
+                    (token) => token.address === value
+                  );
                   setToken0(selectedToken || null);
                 }}
               >
@@ -190,14 +202,20 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
               <ArrowDown className="h-4 w-4 text-gray-600 hover:text-blue-600" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent><p>交换代币位置 (Ctrl+S)</p></TooltipContent>
+          <TooltipContent>
+            <p>交换代币位置 (Ctrl+S)</p>
+          </TooltipContent>
         </Tooltip>
       </div>
 
       {/* 输出代币 */}
-      <Card className={`transition-all duration-200 ${
-        focusedInput === 'output' ? 'ring-2 ring-green-500 shadow-lg' : 'hover:shadow-md'
-      }`}>
+      <Card
+        className={`transition-all duration-200 ${
+          focusedInput === "output"
+            ? "ring-2 ring-green-500 shadow-lg"
+            : "hover:shadow-md"
+        }`}
+      >
         <CardContent className="p-4">
           <div className="space-y-3">
             <div className="flex justify-between items-center">
@@ -208,15 +226,17 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
                 </span>
               )}
             </div>
-            
+
             <div className="flex space-x-3">
               <div className="flex-1">
                 <Input
                   type="text"
                   placeholder="0.0"
                   value={outputAmount}
-                  onChange={(e) => handleInputChange(e.target.value, false)}
-                  onFocus={() => setFocusedInput('output')}
+                  onChange={(e) =>
+                    handleInputChange(e.target.value, false, selectPool)
+                  }
+                  onFocus={() => setFocusedInput("output")}
                   onBlur={() => setFocusedInput(null)}
                   className="text-right text-xl font-bold border-0 bg-transparent focus:ring-0 text-foreground"
                 />
@@ -226,11 +246,13 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
                   </div>
                 )}
               </div>
-              
+
               <Select
                 value={token1?.address || ""}
                 onValueChange={(value) => {
-                  const selectedToken = availableTokensForOutput.find(token => token.address === value);
+                  const selectedToken = availableTokensForOutput.find(
+                    (token) => token.address === value
+                  );
                   setToken1(selectedToken || null);
                 }}
               >

@@ -9,7 +9,7 @@ import {
   getTokenColor
 } from '@/utils/tokenUtils';
 import usePoolManagerWithClients from './usePoolManagerWithClients';
-import { useTokenBalance } from './useTokenBalance'; // 改为使用批量查询
+import { useTokenBalance } from './newUseTokenBalance'; // 改为使用批量查询
 
 // 直接在文件中定义类型
 export interface Token {

@@ -18,6 +18,7 @@ export const TOKEN_INFO: Record<string, { symbol: string; name: string; decimals
     name: "My Token C", 
     decimals: 18 
   },
+  
   "0xD61bfEBA1E28356e653977E4fC5AA82F25396256": { 
     symbol: "MyTokenA", 
     name: "My Token A", 
@@ -27,6 +28,21 @@ export const TOKEN_INFO: Record<string, { symbol: string; name: string; decimals
     symbol: "MyTokenB", 
     name: "My Token B",
     decimals: 18
+  },
+    "0xCf7D10bB0bF822857c91b381c68a555bEB2955f4": { 
+    symbol: "MyTokenD", 
+    name:"My Token D",
+    decimals: 18
+  },
+  "0x094C27cf4418De2ea944F39d636f059Bf140549c":{
+    symbol: "MyTokenE", 
+    name: "My Token E", 
+    decimals: 18 
+  },
+  "0x7B5Bcf8E85106d9fc9623816936Ba6a95Dd25A4E":{
+     symbol: "MyTokenF", 
+    name: "My Token F", 
+    decimals: 18 
   },
   // 添加你现有的代币
   "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2": {

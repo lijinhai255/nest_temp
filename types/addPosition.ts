@@ -1,5 +1,6 @@
 // types/addPosition.ts - 更新类型定义
 import { PoolInfo } from '@/store/usePoolManagerStore';
+import { TOKEN_INFO } from '@/utils/tokenUtils';
 import { Address } from 'viem';
 
 // 基础代币接口
@@ -46,34 +47,6 @@ token0: Address; // 保持与原有 Pair 兼容
 // 为了向后兼容，保留 Pair 类型但指向 TradingPair
 export type Pair = TradingPair;
 
-// 代币信息配置
-export const TOKEN_INFO: Record<string, { symbol: string; name: string; decimals: number }> = {
-  "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE": { 
-    symbol: "ETH", 
-    name: "Ethereum", 
-    decimals: 18 
-  },
-  "0x0000000000000000000000000000000000000000": { 
-    symbol: "ETH", 
-    name: "Ethereum", 
-    decimals: 18 
-  },
-  "0xEaaAbd33D863Ee55BD41706E977e97CCE6dBd0d0": { 
-    symbol: "MyTokenC", 
-    name: "My Token C", 
-    decimals: 18 
-  },
-  "0xD61bfEBA1E28356e653977E4fC5AA82F25396256": { 
-    symbol: "MyTokenA", 
-    name: "My Token A", 
-    decimals: 18 
-  },
-  "0xbe04b4418BF39066628CCf1e7f8f0aEcC8139E6F": { 
-    symbol: "MyTokenB", 
-    name:"My Token B",
-    decimals: 18
-  },
-};
 
 // 工具函数
 export const formatFeePercent = (fee: number): string => {

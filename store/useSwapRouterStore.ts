@@ -41,6 +41,7 @@ export interface QuoteExactInputParams {
   indexPath: number[];
   amountIn: bigint;
   sqrtPriceLimitX96: bigint;
+  
 }
 
 // 定义 QuoteExactOutputParams 类型

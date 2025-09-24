@@ -15,6 +15,10 @@ import SwapCard from "./swap/SwapCard";
 
 // 导入类型
 import { SwapSettings, TradeAnalysis } from "./swap/types";
+import usePoolManagerWithClients from "@/hooks/usePoolManagerWithClients";
+import { PoolInfo } from "@/store/usePoolManagerStore";
+import { formatUnits, parseUnits } from "viem";
+import { calculateSwapOutput, formatPrice } from "@/utils/priceCalculations";
 
 const SwapComponent = () => {
   const { toast } = useToast();
@@ -160,11 +164,167 @@ const SwapComponent = () => {
   }, [token0, inputAmount]);
 
   const hasInsufficientBalance = checkInsufficientBalance();
+  // 新增的使用特定池子获取报价的函数
+  const getQuoteWithSelectedPool = useCallback(
+    async (
+      tokenIn: Token,
+      tokenOut: Token,
+      amountIn: string,
+      selectedPool: PoolInfo
+    ) => {
+      console.log("🏊‍♂️ 使用指定池子获取报价:", {
+        tokenIn: tokenIn.symbol,
+        tokenOut: tokenOut.symbol,
+        amountIn,
+        poolAddress: selectedPool.pool.slice(0, 10) + "...",
+        fee: selectedPool.fee,
+      });
 
+      try {
+        // 确定交易方向
+        const zeroForOne =
+          tokenIn.address.toLowerCase() === selectedPool.token0.toLowerCase();
+        console.log(
+          "交易方向:",
+          zeroForOne ? "token0 -> token1" : "token1 -> token0"
+        );
+
+        // 解析输入金额
+        const amountInBigInt = parseUnits(amountIn, tokenIn.decimals);
+
+        // 计算手续费
+        const feeAmount =
+          (amountInBigInt * BigInt(selectedPool.fee)) / BigInt(1000000);
+        const amountInAfterFee = amountInBigInt - feeAmount;
+
+        // 计算输出金额 (使用 calculateSwapOutput 函数，如果可用)
+        if (typeof calculateSwapOutput === "function") {
+          const swapResult = calculateSwapOutput(
+            amountInAfterFee,
+            selectedPool.sqrtPriceX96,
+            selectedPool.liquidity,
+            selectedPool.fee,
+            zeroForOne,
+            tokenIn.decimals,
+            tokenOut.decimals
+          );
+
+          if (swapResult && swapResult.amountOut > 0n) {
+            // 格式化输出金额
+            const outputAmountFormatted = formatUnits(
+              swapResult.amountOut,
+              tokenOut.decimals
+            );
+
+            // 构建报价结果
+            return {
+              inputAmount: amountIn,
+              outputAmount: outputAmountFormatted,
+              outputAmountFormatted,
+              currentPrice: swapResult.effectivePrice,
+              currentPriceFormatted: formatPrice(
+                swapResult.effectivePrice,
+                tokenIn.symbol,
+                tokenOut.symbol
+              ),
+              effectivePrice: swapResult.effectivePrice,
+              effectivePriceFormatted: formatPrice(
+                swapResult.effectivePrice,
+                tokenIn.symbol,
+                tokenOut.symbol
+              ),
+              priceImpact: swapResult.priceImpact,
+              priceImpactFormatted: `${swapResult.priceImpact.toFixed(2)}%`,
+              priceImpactV3: swapResult.priceImpact,
+              priceImpactV3Formatted: `${swapResult.priceImpact.toFixed(2)}%`,
+              feeAmount: swapResult.feeAmount,
+              feeAmountFormatted: formatUnits(
+                swapResult.feeAmount,
+                tokenIn.decimals
+              ),
+              totalFees: swapResult.feeAmount,
+              poolUsed: selectedPool,
+              tradingPath: [selectedPool],
+              isMultiHop: false,
+              isLoading: false,
+              error: null,
+              lastUpdated: Date.now(),
+            };
+          }
+        }
+
+        // 如果上面的计算失败，使用简化的计算方法
+        // 简单的1:1兑换（考虑手续费）
+        const feeMultiplier = 1000000 - selectedPool.fee;
+        const outputAmount =
+          (amountInAfterFee * BigInt(feeMultiplier)) / 1000000n;
+        const outputAmountFormatted = formatUnits(
+          outputAmount,
+          tokenOut.decimals
+        );
+
+        return {
+          inputAmount: amountIn,
+          outputAmount: outputAmountFormatted,
+          outputAmountFormatted,
+          currentPrice: Number(outputAmount) / Number(amountInBigInt),
+          currentPriceFormatted: `1 ${tokenIn.symbol} = ${(
+            Number(outputAmount) / Number(amountInBigInt)
+          ).toFixed(6)} ${tokenOut.symbol}`,
+          effectivePrice: Number(outputAmount) / Number(amountInBigInt),
+          effectivePriceFormatted: `1 ${tokenIn.symbol} = ${(
+            Number(outputAmount) / Number(amountInBigInt)
+          ).toFixed(6)} ${tokenOut.symbol}`,
+          priceImpact: 0.3, // 默认价格影响
+          priceImpactFormatted: "0.30%",
+          priceImpactV3: 0.3,
+          priceImpactV3Formatted: "0.30%",
+          feeAmount,
+          feeAmountFormatted: formatUnits(feeAmount, tokenIn.decimals),
+          totalFees: feeAmount,
+          poolUsed: selectedPool,
+          tradingPath: [selectedPool],
+          isMultiHop: false,
+          isLoading: false,
+          error: null,
+          lastUpdated: Date.now(),
+        };
+      } catch (error) {
+        console.error("❌ 使用指定池子获取报价失败:", error);
+        return {
+          inputAmount: amountIn,
+          outputAmount: "0",
+          outputAmountFormatted: "计算失败",
+          currentPrice: 0,
+          currentPriceFormatted: "计算失败",
+          effectivePrice: 0,
+          effectivePriceFormatted: "计算失败",
+          priceImpact: 0,
+          priceImpactFormatted: "0%",
+          priceImpactV3: 0,
+          priceImpactV3Formatted: "0%",
+          feeAmount: 0n,
+          feeAmountFormatted: "0",
+          totalFees: 0n,
+          poolUsed: selectedPool,
+          tradingPath: [selectedPool],
+          isMultiHop: false,
+          isLoading: false,
+          error: "计算报价失败",
+          lastUpdated: Date.now(),
+        };
+      }
+    },
+    []
+  );
   // 增强的输入处理函数
   const handleInputChange = useCallback(
-    async (value: string, isInput: boolean = true) => {
-      console.log("🔄 输入变化:", { value, isInput });
+    async (value: string, isInput: boolean = true, selectedPool?: PoolInfo) => {
+      console.log("🔄 输入变化:", {
+        value,
+        isInput,
+        selectedPool: selectedPool?.pool?.slice(0, 10) + "...",
+      });
 
       if (!value || parseFloat(value) <= 0) {
         if (isInput) {
@@ -198,7 +358,20 @@ const SwapComponent = () => {
           const fromToken = isInput ? token0 : token1;
           const toToken = isInput ? token1 : token0;
 
-          const result = await getQuote(fromToken, toToken, sanitizedValue);
+          // 如果提供了特定的池子，使用它来获取报价
+          let result;
+          if (selectedPool) {
+            // 使用自定义的获取报价方法，直接使用选定的池子
+            result = await getQuoteWithSelectedPool(
+              fromToken,
+              toToken,
+              sanitizedValue,
+              selectedPool
+            );
+          } else {
+            // 使用默认的获取报价方法
+            result = await getQuote(fromToken, toToken, sanitizedValue);
+          }
 
           if (result && !result.error) {
             const outputValue =
