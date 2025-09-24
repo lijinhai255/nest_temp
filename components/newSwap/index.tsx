@@ -218,7 +218,8 @@ export const NewSwap = () => {
           tokenIn: inputToken.address as `0x${string}`,
           tokenOut: outputToken.address as `0x${string}`,
           indexPath: selectedPool ? [selectedPool.index] : [0],
-          amountIn: parseUnits(inputAmount, inputToken.decimals),
+          // amountIn: "0.001",
+          amountIn: parseUnits(`0.000000000000000002`, inputToken.decimals),
           sqrtPriceLimitX96: 0n,
         };
 
