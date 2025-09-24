@@ -221,10 +221,9 @@ export const NewSwap = () => {
           amountIn: parseUnits(inputAmount, inputToken.decimals),
           sqrtPriceLimitX96: 0n,
         };
-        debugger;
 
-        // const expectedOutput = await quoteExactInput(quoteParams);
-        // return formatUnits(expectedOutput, outputToken.decimals);
+        const expectedOutput = await quoteExactInput(quoteParams);
+        return formatUnits(expectedOutput, outputToken.decimals);
       } catch (error) {
         console.error("获取报价失败:", error);
         // 如果报价失败，使用简单计算作为回退方案
@@ -349,14 +348,14 @@ export const NewSwap = () => {
       setOutputAmount(estimatedOutput);
 
       // 然后获取精确报价
-      // const exactOutput = await getExactOutputQuote(
-      //   inputToken,
-      //   outputToken,
-      //   value
-      // );
-      // if (exactOutput !== "0") {
-      //   setOutputAmount(exactOutput);
-      // }
+      const exactOutput = await getExactOutputQuote(
+        inputToken,
+        outputToken,
+        value
+      );
+      if (exactOutput !== "0") {
+        setOutputAmount(exactOutput);
+      }
     },
     [inputToken, outputToken, calculateOutputAmount, getExactOutputQuote]
   );

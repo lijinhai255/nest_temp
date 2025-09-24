@@ -443,6 +443,8 @@ const AddPosition: React.FC<AddPositionProps> = ({
       };
 
       const mintParams = buildMintParams(mintParamsInput);
+      debugger;
+
 
       // 使用自动处理授权的方法
       const result = await mintWithApproval(
