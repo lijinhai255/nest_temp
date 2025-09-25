@@ -1183,7 +1183,7 @@ export const NewSwap = () => {
   }, [refetchBalances]);
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto pt-8">
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle>代币交换</CardTitle>
