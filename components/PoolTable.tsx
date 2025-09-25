@@ -122,11 +122,11 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Token</TableHead>
-            <TableHead>Fee tier</TableHead>
-            <TableHead>Set price range</TableHead>
-            <TableHead>Current price</TableHead>
-            <TableHead>Liquidity</TableHead>
+            <TableHead className="w-[180px]">Token</TableHead>
+            <TableHead className="w-[100px]">Fee tier</TableHead>
+            <TableHead className="w-[200px]">Set price range</TableHead>
+            <TableHead className="w-[150px]">Current price</TableHead>
+            <TableHead className="w-[120px]">Liquidity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -148,17 +148,21 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
                 key={`${pool.pool}-${index}`}
                 className="cursor-pointer hover:bg-gray-50"
               >
-                <TableCell>
+                <TableCell className="w-[180px] truncate" title={formatTokenPair(pool.token0, pool.token1)}>
                   {formatTokenPair(pool.token0, pool.token1)}
                 </TableCell>
-                <TableCell>{formatFee(pool.fee)}</TableCell>
-                <TableCell>
+                <TableCell className="w-[100px] truncate" title={formatFee(pool.fee)}>
+                  {formatFee(pool.fee)}
+                </TableCell>
+                <TableCell className="w-[200px] truncate" title={formatPriceRange(pool.tickLower, pool.tickUpper)}>
                   {formatPriceRange(pool.tickLower, pool.tickUpper)}
                 </TableCell>
-                <TableCell>
+                <TableCell className="w-[150px] truncate" title={formatCurrentPrice(typeof pool.sqrtPriceX96 === 'string' ? BigInt(pool.sqrtPriceX96) : pool.sqrtPriceX96, pool.tick)}>
                   {formatCurrentPrice(typeof pool.sqrtPriceX96 === 'string' ? BigInt(pool.sqrtPriceX96) : pool.sqrtPriceX96, pool.tick)}
                 </TableCell>
-                <TableCell>{formatLiquidity(typeof pool.liquidity === 'string' ? BigInt(pool.liquidity) : pool.liquidity)}</TableCell>
+                <TableCell className="w-[120px] truncate" title={formatLiquidity(typeof pool.liquidity === 'string' ? BigInt(pool.liquidity) : pool.liquidity)}>
+                  {formatLiquidity(typeof pool.liquidity === 'string' ? BigInt(pool.liquidity) : pool.liquidity)}
+                </TableCell>
               </TableRow>
             ))
           )}
@@ -178,7 +182,9 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   aria-disabled={currentPage === 1}
                   className={
-                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                    currentPage === 1
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer hover:bg-gray-100"
                   }
                 />
               </PaginationItem>
@@ -197,7 +203,7 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
                   className={
                     currentPage === totalPages || totalPages === 0
                       ? "pointer-events-none opacity-50"
-                      : ""
+                      : "cursor-pointer hover:bg-gray-100"
                   }
                 />
               </PaginationItem>

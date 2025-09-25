@@ -687,7 +687,8 @@ export default function CreatePool({ onPoolCreated }: CreatePoolProps) {
                 </div>
               </div>
 
-              {/* Display Tick values */}
+              {/* Display Tick values - 已隐藏UI显示，保留逻辑 */}
+              {/*
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div>
                   <Label htmlFor="tickLower">Lower Tick</Label>
@@ -717,6 +718,7 @@ export default function CreatePool({ onPoolCreated }: CreatePoolProps) {
                   </p>
                 </div>
               </div>
+              */}
             </div>
 
             {/* Validation warnings */}
@@ -743,9 +745,9 @@ export default function CreatePool({ onPoolCreated }: CreatePoolProps) {
                     Price Range: {priceRange[0].toFixed(6)} -{" "}
                     {priceRange[1].toFixed(6)}
                   </p>
-                  <p>
+                  {/* <p>
                     Tick Range: {tickLower} to {tickUpper}
-                  </p>
+                  </p> */}
                 </div>
               </div>
             )}

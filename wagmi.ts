@@ -11,7 +11,7 @@ import {
 } from '@rainbow-me/rainbowkit/wallets';
 
 import { mainnet, polygon, optimism, arbitrum, base, sepolia } from 'wagmi/chains';
-import { http, createConfig } from 'wagmi';
+import { http, createConfig, createStorage } from 'wagmi';
 import { QueryClient } from '@tanstack/react-query';
 
 export const queryClient = new QueryClient();
@@ -64,6 +64,11 @@ export const config = createConfig({
   },
   connectors,
   ssr: true,
+  // 🔄 添加持久化存储配置
+  storage: createStorage({
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    key: 'wagmi-store',
+  }),
 });
 
 export default config;

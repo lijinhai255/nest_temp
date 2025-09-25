@@ -12,7 +12,36 @@ import { Address } from 'viem';
  * @returns 格式化后的价格范围字符串
  */
 export const formatPriceRange = (tickLower: number, tickUpper: number): string => {
-  return `${tickLower.toFixed(4)} – ${tickUpper.toFixed(4)}`;
+  try {
+    // 使用 tick 计算价格，与 formatCurrentPrice 使用相同的计算逻辑
+    const lowerPrice = Math.pow(1.0001, tickLower);
+    const upperPrice = Math.pow(1.0001, tickUpper);
+
+    // 简化的格式化策略：优先使用数字格式，只有在极大数值时才使用K/M/B
+    const formatPrice = (price: number): string => {
+      if (price < 0.000001) {
+        return price.toExponential(2);
+      } else if (price < 0.001) {
+        return price.toFixed(6);
+      } else if (price < 1) {
+        return price.toFixed(4);
+      } else if (price < 10000) {
+        return price.toFixed(2);
+      } else if (price < 1000000) {
+        return price.toLocaleString(undefined, { maximumFractionDigits: 0 });
+      } else if (price < 1000000000) {
+        return `${(price / 1000000).toFixed(1)}M`;
+      } else {
+        return `${(price / 1000000000).toFixed(1)}B`;
+      }
+    };
+
+    return `${formatPrice(lowerPrice)} – ${formatPrice(upperPrice)}`;
+  } catch (error) {
+    console.error("价格区间计算错误:", error);
+    // 备用方案：显示原始 tick 值，但限制显示长度
+    return `${tickLower.toFixed(0)} – ${tickUpper.toFixed(0)}`;
+  }
 };
 
 /**

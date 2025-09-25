@@ -95,9 +95,9 @@ const AddPosition: React.FC<AddPositionProps> = ({
   const [selectedToken0, setSelectedToken0] = useState<Token | undefined>();
   const [selectedToken1, setSelectedToken1] = useState<Token | undefined>();
   const [collectAllPools, setCollectAllPools] = useState<PoolInfo[]>();
-  // 添加价格区间状态
-  const [lowerPrice, setLowerPrice] = useState<string>("");
-  const [upperPrice, setUpperPrice] = useState<string>("");
+  // 添加价格区间状态（已移除UI显示）
+  // const [lowerPrice, setLowerPrice] = useState<string>("");
+  // const [upperPrice, setUpperPrice] = useState<string>("");
 
   // 🔧 修复调试状态类型
   const [debugInfo, setDebugInfo] = useState<DebugInfo>({
@@ -227,8 +227,6 @@ const AddPosition: React.FC<AddPositionProps> = ({
     setAmount0("");
     setAmount1("");
     setSelectedPool(null); // 先重置
-    setLowerPrice("");
-    setUpperPrice("");
 
     // 直接从 pair 中获取代币信息
     const token0: Token = {
@@ -319,13 +317,12 @@ const AddPosition: React.FC<AddPositionProps> = ({
     selectedToken1?.decimals || 18
   );
 
-  // 当池子价格加载完成时，自动设置价格区间
+  // 当池子价格加载完成时，不再自动设置价格区间（已移除）
   useEffect(() => {
-    if (poolPrice && !lowerPrice && !upperPrice) {
-      setLowerPrice(poolPrice.priceRange.lowerPrice.toFixed(6));
-      setUpperPrice(poolPrice.priceRange.upperPrice.toFixed(6));
+    if (poolPrice) {
+      // 价格区间设置已移除
     }
-  }, [poolPrice, lowerPrice, upperPrice]);
+  }, [poolPrice]);
 
   // 获取代币余额
   const {
@@ -514,8 +511,6 @@ const AddPosition: React.FC<AddPositionProps> = ({
     setSelectedToken0(undefined);
     setSelectedToken1(undefined);
     setFilteredPools([]);
-    setLowerPrice("");
-    setUpperPrice("");
   }, []);
 
   // 🔧 类型安全的最大值点击处理
@@ -627,64 +622,7 @@ const AddPosition: React.FC<AddPositionProps> = ({
                 amount1={amount1}
               />
             )}
-            {/* 价格区间设置 */}
-            {poolPrice && (
-              <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  设置价格区间
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-600 mb-1 block">
-                      最低价格
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="0.00"
-                      className="w-full px-3 py-2 border rounded-lg text-sm"
-                      value={lowerPrice}
-                      onChange={(e) => setLowerPrice(e.target.value)}
-                      disabled={isSubmitting}
-                    />
-                    <div className="text-xs text-gray-500 mt-1">
-                      {selectedToken1?.symbol} per {selectedToken0?.symbol}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-gray-600 mb-1 block">
-                      最高价格
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="0.00"
-                      className="w-full px-3 py-2 border rounded-lg text-sm"
-                      value={upperPrice}
-                      onChange={(e) => setUpperPrice(e.target.value)}
-                      disabled={isSubmitting}
-                    />
-                    <div className="text-xs text-gray-500 mt-1">
-                      {selectedToken1?.symbol} per {selectedToken0?.symbol}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 当前价格指示器 */}
-                <div className="flex items-center justify-center p-2 bg-white dark:bg-gray-800 rounded border">
-                  <div className="text-sm">
-                    <span className="text-gray-600">当前价格: </span>
-                    <span className="font-mono font-medium">
-                      {poolPrice.currentPrice.token0PerToken1.toFixed(6)}
-                    </span>
-                    <span className="text-gray-600 ml-1">
-                      {selectedToken1?.symbol} per {selectedToken0?.symbol}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* 添加流动性预览 */}
+              {/* 添加流动性预览 */}
             {selectedPool && amount0 && amount1 && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
                 <div className="text-sm font-medium text-green-800">
@@ -707,18 +645,7 @@ const AddPosition: React.FC<AddPositionProps> = ({
                     <span>池子索引:</span>
                     <span>{selectedPool.index}</span>
                   </div>
-                  {lowerPrice && upperPrice && (
-                    <>
-                      <div className="flex justify-between">
-                        <span>价格区间:</span>
-                        <span className="font-mono text-xs">
-                          {parseFloat(lowerPrice).toFixed(4)} -{" "}
-                          {parseFloat(upperPrice).toFixed(4)}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
+                  </div>
               </div>
             )}
           </div>

@@ -35,6 +35,7 @@ import {
   WalletFinder,
   IconLoader,
 } from "@/lib/wallets/utils";
+import WalletDebugger from "@/utils/walletDebug";
 const WalletContext = createContext<WalletContextValue>({
   isConnecting: false,
   isConnected: false,
@@ -98,14 +99,16 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
   }>({});
 
   // 🆕 在组件内部使用 wagmi hooks
-  // const account = useAccount();
-  // const currentChainId = useChainId();
+  const { address: wagmiAddress, isConnected: wagmiConnected, connector: wagmiConnector } = useAccount();
+  const wagmiChainId = useChainId();
   // 存储当前的钱包
   const [currentWalletId, setCurrentWalletId] = useState("");
   // 🆕 新增 useDisconnect hook
   const { disconnect: wagmiDisconnect } = useDisconnect();
   // 获取 wagmi 的 publicClient
   const publicClient = usePublicClient();
+  // 添加自动连接已尝试的标志
+  const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
 
   // 创建 tokenBalanceCache 来缓存代币余额信息
   const [tokenBalanceCache, setTokenBalanceCache] = useState<{
@@ -289,19 +292,10 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
 
     try {
       // 🆕 首先调用 wagmi 的断开连接方法
+      wagmiDisconnect();
+
       // 🔧 调用 walletManager 的断开连接方法
       await walletManager.disconnectWallet(currentWalletId);
-      setState((prev) => ({
-        ...prev,
-        isConnected: false,
-        isDisconnected: true,
-        address: "0x",
-        chainID: "",
-        wallet: undefined,
-        signer: undefined,
-        balance: "",
-      }));
-      wagmiDisconnect();
     } catch (error) {
       console.warn("⚠️ 断开钱包连接器时出错:", error);
       // 不抛出错误，因为断开连接失败不应该阻止清理流程
@@ -311,11 +305,29 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
     if (typeof window !== "undefined") {
       localStorage.removeItem("lastConnectedWallet");
       localStorage.removeItem("walletAddress");
+      localStorage.removeItem("lastConnectionTime");
       console.log("🧹 已清理本地存储");
     }
 
+    // 🔄 重置状态
+    setState((prev) => ({
+      ...prev,
+      isConnected: false,
+      isDisconnected: true,
+      address: "0x",
+      chainID: "-1",
+      wallet: undefined,
+      signer: undefined,
+      balance: "0.0000",
+      isConnecting: false,
+      error: null,
+    }));
+
     // 🔄 重置当前钱包ID
     setCurrentWalletId("");
+
+    // 🧹 清理代币余额缓存
+    setTokenBalanceCache({});
 
     console.log("✅ 钱包断开连接完成");
   };
@@ -373,9 +385,20 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
     if (typeof window !== "undefined") {
       localStorage.setItem("lastConnectedWallet", walletId);
       localStorage.setItem("walletAddress", result.address || "");
+
+      // 🔄 额外保存时间戳，用于调试连接状态
+      localStorage.setItem("lastConnectionTime", Date.now().toString());
     }
 
     closeModal();
+
+    // 🔄 确保 wagmi 状态已经同步
+    // 注意：这里延迟一下让 wagmi 状态更新
+    setTimeout(() => {
+      if (!wagmiConnected || wagmiAddress !== result.address) {
+        console.log("⚠️ Wagmi 状态未同步，可能需要手动刷新页面");
+      }
+    }, 1000);
 
     return {
       ...result,
@@ -499,18 +522,119 @@ const WalletProvider: React.FC<WalletProviderProps> = ({
     initWallets();
   }, [wallets, projectId]);
 
-  // 自动连接逻辑
+  // 🔄 同步 wagmi 状态到自定义状态
   useEffect(() => {
-    if (autoConnect && !walletsLoading && detectedWallets.length > 0) {
-      const lastConnectedWallet = localStorage.getItem("lastConnectedWallet");
-      if (lastConnectedWallet) {
-        console.log("🔄 尝试自动连接:", lastConnectedWallet);
-        connectWallet(lastConnectedWallet).catch((error) => {
-          console.warn("自动连接失败:", error);
-        });
+    if (wagmiConnected && wagmiAddress) {
+      console.log("🔄 Wagmi 状态变化，同步到自定义状态:", { wagmiConnected, wagmiAddress, wagmiChainId });
+
+      setState((prev) => ({
+        ...prev,
+        isConnected: true,
+        isDisconnected: false,
+        address: wagmiAddress as Address,
+        chainID: wagmiChainId?.toString() || prev.chainID,
+        isConnecting: false,
+        error: null,
+      }));
+
+      // 如果有 wagmi connector，尝试更新当前钱包ID
+      if (wagmiConnector && !currentWalletId) {
+        const connectorName = wagmiConnector.name.toLowerCase();
+        const matchedWallet = Object.values(walletInstances).flat().find(
+          wallet => wallet.name.toLowerCase().includes(connectorName) ||
+                   wallet.id.toLowerCase().includes(connectorName)
+        );
+
+        if (matchedWallet) {
+          setCurrentWalletId(matchedWallet.id);
+          localStorage.setItem("lastConnectedWallet", matchedWallet.id);
+        }
       }
+    } else if (!wagmiConnected && state.isConnected) {
+      // wagmi 断开了，同步断开状态
+      setState((prev) => ({
+        ...prev,
+        isConnected: false,
+        isDisconnected: true,
+        address: "0x",
+        chainID: "-1",
+      }));
+      setCurrentWalletId("");
     }
-  }, [autoConnect, walletsLoading, detectedWallets.length]);
+  }, [wagmiConnected, wagmiAddress, wagmiChainId, wagmiConnector]);
+
+  // 🔄 自动连接逻辑 - 改进版本
+  useEffect(() => {
+    const attemptAutoConnect = async () => {
+      // 如果已经连接或已经尝试过自动连接，则跳过
+      if (wagmiConnected || autoConnectAttempted || !autoConnect) {
+        return;
+      }
+
+      // 等待钱包检测完成
+      if (walletsLoading) {
+        return;
+      }
+
+      const lastConnectedWallet = localStorage.getItem("lastConnectedWallet");
+      if (!lastConnectedWallet) {
+        setAutoConnectAttempted(true);
+        return;
+      }
+
+      console.log("🔄 尝试自动连接:", lastConnectedWallet);
+
+      // 记录调试信息
+      WalletDebugger.logDebugInfo({
+        action: 'auto_connect_start',
+        lastConnectedWallet,
+        walletsLoading,
+        walletInstancesCount: Object.keys(walletInstances).length
+      });
+
+      try {
+        // 检查该钱包是否还存在
+        const walletExists = Object.values(walletInstances).flat().some(
+          wallet => wallet.id === lastConnectedWallet
+        ) || detectedWallets.some(wallet => wallet.id === lastConnectedWallet);
+
+        if (walletExists) {
+          await connectWallet(lastConnectedWallet);
+
+          // 连接后再次记录调试信息
+          setTimeout(() => {
+            WalletDebugger.logDebugInfo({
+              action: 'auto_connect_complete',
+              success: true,
+              wagmiConnected,
+              customConnected: state.isConnected
+            });
+          }, 1000);
+        } else {
+          console.log("🔄 上次连接的钱包不存在，清理存储");
+          localStorage.removeItem("lastConnectedWallet");
+          localStorage.removeItem("walletAddress");
+          localStorage.removeItem("lastConnectionTime");
+        }
+      } catch (error) {
+        console.warn("自动连接失败:", error);
+        // 清理可能损坏的存储
+        localStorage.removeItem("lastConnectedWallet");
+        localStorage.removeItem("walletAddress");
+        localStorage.removeItem("lastConnectionTime");
+
+        // 记录错误信息
+        WalletDebugger.logDebugInfo({
+          action: 'auto_connect_error',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      } finally {
+        setAutoConnectAttempted(true);
+      }
+    };
+
+    attemptAutoConnect();
+  }, [autoConnect, walletsLoading, walletInstances, detectedWallets, autoConnectAttempted, wagmiConnected]);
 
   const value: WalletContextValue = {
     ...state,
