@@ -39,3 +39,84 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Temporary folders
+tmp/
+temp/
+
+# Blockchain and Web3 specific
+# Cryptocurrency wallets
+wallet.json
+wallet.dat
+private-key.txt
+mnemonic.txt
+
+# Blockchain node data
+.ipfs
+.ethereum
+.parity
+.geth
+.arbitrum
+.optimism
+.polygon
+
+# Build artifacts (hardhat, foundry, etc.)
+artifacts/
+cache/
+typechain/
+typechain-types/
+broadcast/
+deployments/
+imports/
+out/
+forge-artifacts/
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output
+
+# DeFi/DEX specific
+pool-data/
+liquidity-data/
+price-data/
+
+# Development scripts output
+scripts/deploy/
+scripts/output/
+
+# Local database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Temporary deployment files
+deploy/
+scripts/deployments/
