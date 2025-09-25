@@ -70,7 +70,7 @@ const EnhancedConnectButton = ({
   );
 
   // 优化：如果wallet还没有初始化，显示加载状态
-  if (!wallet || wallet.isLoading) {
+  if (!wallet || wallet.isConnecting) {
     return <ConnectButtonFallback />;
   }
 
