@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import WalletDebugWrapper from "@/components/WalletDebugWrapper";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -19,7 +20,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ThemeProvider>
-          <RainbowKitProvider>{children}</RainbowKitProvider>
+          <WalletDebugWrapper>
+            <RainbowKitProvider>{children}</RainbowKitProvider>
+          </WalletDebugWrapper>
         </ThemeProvider>
       </body>
     </html>
