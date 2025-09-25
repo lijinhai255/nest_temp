@@ -1183,7 +1183,7 @@ export const NewSwap = () => {
   }, [refetchBalances]);
 
   return (
-    <Card className="w-full max-w-md mx-auto pt-8">
+    <Card className="w-full max-w-md mx-auto mt-20">
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle>代币交换</CardTitle>
@@ -1313,7 +1313,9 @@ export const NewSwap = () => {
           <div className="flex justify-between items-center">
             <div className="text-xs text-muted-foreground">
               余额:{" "}
-              {outputToken ? `${outputToken.balance} ${outputToken.symbol}` : "0"}
+              {outputToken
+                ? `${outputToken.balance} ${outputToken.symbol}`
+                : "0"}
             </div>
             <Button
               variant="ghost"
@@ -1321,7 +1323,11 @@ export const NewSwap = () => {
               onClick={async () => {
                 if (inputToken && outputToken && inputAmount) {
                   console.log("🔍 开始调试 SPL 错误...");
-                  const result = await debugGetExactOutputQuote(inputToken, outputToken, inputAmount);
+                  const result = await debugGetExactOutputQuote(
+                    inputToken,
+                    outputToken,
+                    inputAmount
+                  );
 
                   // 显示结果给用户
                   if (typeof result === "object" && result.success) {
@@ -1415,10 +1421,21 @@ export const NewSwap = () => {
               使用池子: {selectedPool.pool.substring(0, 6)}...
               {selectedPool.pool.substring(38)}
               {selectedPool.liquidity &&
-                ((typeof selectedPool.liquidity === 'bigint' && selectedPool.liquidity > 0n) ||
-                 (typeof selectedPool.liquidity === 'string' && BigInt(selectedPool.liquidity) > 0n)) && (
-                <span> · 流动性: {formatUnits(typeof selectedPool.liquidity === 'bigint' ? selectedPool.liquidity : BigInt(selectedPool.liquidity), 0)}</span>
-              )}
+                ((typeof selectedPool.liquidity === "bigint" &&
+                  selectedPool.liquidity > 0n) ||
+                  (typeof selectedPool.liquidity === "string" &&
+                    BigInt(selectedPool.liquidity) > 0n)) && (
+                  <span>
+                    {" "}
+                    · 流动性:{" "}
+                    {formatUnits(
+                      typeof selectedPool.liquidity === "bigint"
+                        ? selectedPool.liquidity
+                        : BigInt(selectedPool.liquidity),
+                      0
+                    )}
+                  </span>
+                )}
             </div>
           )}
 

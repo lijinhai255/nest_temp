@@ -10,6 +10,34 @@ import {
   getFilteredChains,
 } from "@/utils/connect-button-utils";
 import { EnhancedConnectButtonProps } from "@/types/connect-button";
+import { useState, useEffect } from "react";
+
+// 连接按钮加载状态组件
+function ConnectButtonFallback() {
+  return (
+    <div className="w-24 h-10 bg-gray-200 animate-pulse rounded-full" />
+  );
+}
+
+// 延迟加载连接按钮组件
+function DelayedConnectButton({ children }: { children: React.ReactNode }) {
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    // 延迟 200ms 后再渲染连接按钮，让页面核心内容先显示
+    const timer = setTimeout(() => {
+      setShouldRender(true);
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!shouldRender) {
+    return <ConnectButtonFallback />;
+  }
+
+  return <>{children}</>;
+}
 
 const EnhancedConnectButton = ({
   label = "连接钱包",
@@ -41,16 +69,23 @@ const EnhancedConnectButton = ({
     onBalanceChange
   );
 
-  // 如果未连接，显示连接按钮
+  // 优化：如果wallet还没有初始化，显示加载状态
+  if (!wallet || wallet.isLoading) {
+    return <ConnectButtonFallback />;
+  }
+
+  // 如果未连接，显示延迟加载的连接按钮
   if (!wallet.isConnected) {
     return (
-      <ConnectButton
-        label={label}
-        size={size}
-        className={className}
-        isConnecting={wallet.isConnecting}
-        onClick={handleConnect}
-      />
+      <DelayedConnectButton>
+        <ConnectButton
+          label={label}
+          size={size}
+          className={className}
+          isConnecting={wallet.isConnecting}
+          onClick={handleConnect}
+        />
+      </DelayedConnectButton>
     );
   }
 
@@ -101,25 +136,27 @@ const EnhancedConnectButton = ({
 
   // 默认和大尺寸模式
   return (
-    <AccountDropdown
-      address={wallet.address || ""}
-      balance={wallet.balance}
-      currentChain={currentChain}
-      showBalance={showBalance}
-      showChainSwitcher={showChainSwitcher}
-      size={size}
-      accountStatus={accountStatus}
-      chainStatus={chainStatus}
-      className={className}
-      filteredChains={filteredChains}
-      switchingChainId={state.switchingChainId}
-      copied={state.copied}
-      balanceLoading={wallet.balanceLoading}
-      onChainSwitch={handleChainSwitch}
-      onCopyAddress={copyAddress}
-      onDisconnect={handleDisconnect}
-      onFetchBalance={wallet.fetchBalance}
-    />
+    <DelayedConnectButton>
+      <AccountDropdown
+        address={wallet.address || ""}
+        balance={wallet.balance}
+        currentChain={currentChain}
+        showBalance={showBalance}
+        showChainSwitcher={showChainSwitcher}
+        size={size}
+        accountStatus={accountStatus}
+        chainStatus={chainStatus}
+        className={className}
+        filteredChains={filteredChains}
+        switchingChainId={state.switchingChainId}
+        copied={state.copied}
+        balanceLoading={wallet.balanceLoading}
+        onChainSwitch={handleChainSwitch}
+        onCopyAddress={copyAddress}
+        onDisconnect={handleDisconnect}
+        onFetchBalance={wallet.fetchBalance}
+      />
+    </DelayedConnectButton>
   );
 };
 
