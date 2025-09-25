@@ -55,7 +55,7 @@ export const useTokenOptions = (): TokenOptionsResult => {
       console.log("🔄 开始获取交易对数据...");
       fetchPairs();
     }
-  }, [pairs]);
+  }, []); // 只在组件挂载时执行一次
 
   // 基础代币选项（不含余额）
   const baseTokenOptions = useMemo(() => {

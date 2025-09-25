@@ -156,9 +156,9 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
                   {formatPriceRange(pool.tickLower, pool.tickUpper)}
                 </TableCell>
                 <TableCell>
-                  {formatCurrentPrice(pool.sqrtPriceX96, pool.tick)}
+                  {formatCurrentPrice(typeof pool.sqrtPriceX96 === 'string' ? BigInt(pool.sqrtPriceX96) : pool.sqrtPriceX96, pool.tick)}
                 </TableCell>
-                <TableCell>{formatLiquidity(pool.liquidity)}</TableCell>
+                <TableCell>{formatLiquidity(typeof pool.liquidity === 'string' ? BigInt(pool.liquidity) : pool.liquidity)}</TableCell>
               </TableRow>
             ))
           )}

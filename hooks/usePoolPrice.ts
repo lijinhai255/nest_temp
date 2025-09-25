@@ -32,7 +32,7 @@ export const usePoolPrice = (pool?: PoolInfo, token0Decimals = 18, token1Decimal
     try {
       // 从 sqrtPriceX96 计算当前价格
       const currentPrice = calculatePriceFromSqrtPriceX96(
-        pool.sqrtPriceX96,
+        typeof pool.sqrtPriceX96 === 'string' ? BigInt(pool.sqrtPriceX96) : pool.sqrtPriceX96,
         token0Decimals,
         token1Decimals
       );
@@ -55,7 +55,7 @@ export const usePoolPrice = (pool?: PoolInfo, token0Decimals = 18, token1Decimal
           lowerPrice: lowerPrice.token0PerToken1,
           upperPrice: upperPrice.token0PerToken1,
         },
-        liquidity: formatLiquidity(pool.liquidity),
+        liquidity: formatLiquidity(typeof pool.liquidity === 'string' ? BigInt(pool.liquidity) : pool.liquidity),
         isActive,
         utilizationRate,
       });

@@ -423,26 +423,27 @@ export default function CreatePool({ onPoolCreated }: CreatePoolProps) {
 
         onPoolCreated?.();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (!isMountedRef.current) return;
 
       console.error("创建池失败:", err);
 
       let errorMessage = "Failed to create pool";
-      if (err.message?.includes("SPL")) {
+      if (err instanceof Error && err.message?.includes("SPL")) {
         errorMessage =
           "Square root price limit exceeded. Please adjust your initial price or price range to be more conservative.";
-      } else if (err.message?.includes("TLU")) {
+      } else if (err instanceof Error && err.message?.includes("TLU")) {
         errorMessage =
           "Invalid tick range. Lower tick must be less than upper tick.";
       } else if (
+        err instanceof Error && (
         err.message?.includes("user rejected") ||
-        err.message?.includes("rejected")
+        err.message?.includes("rejected"))
       ) {
         errorMessage = "Transaction cancelled by user";
-      } else if (err.message?.includes("insufficient funds")) {
+      } else if (err instanceof Error && err.message?.includes("insufficient funds")) {
         errorMessage = "Insufficient funds for transaction";
-      } else if (err.message) {
+      } else if (err instanceof Error && err.message) {
         errorMessage = err.message;
       }
 

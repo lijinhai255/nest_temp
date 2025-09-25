@@ -12,6 +12,7 @@ import {
   BarChart3,
   Settings,
 } from "lucide-react";
+import { SwapQuote } from "./types";
 
 interface SwapControlPanelProps {
   showTokenStats: boolean;
@@ -20,7 +21,7 @@ interface SwapControlPanelProps {
   setShowSlippageSettings: (value: boolean) => void;
   refreshQuote: () => void;
   handleRefreshBalances: () => void;
-  quote: any; // 使用实际的类型
+  quote: SwapQuote | null;
   isRefreshing: boolean;
 }
 

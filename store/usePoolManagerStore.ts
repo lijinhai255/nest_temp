@@ -24,8 +24,8 @@ export interface PoolInfo {
   tickLower: number;
   tickUpper: number;
   tick: number;
-  sqrtPriceX96: bigint;
-  liquidity: bigint;
+  sqrtPriceX96: string | bigint;
+  liquidity: string | bigint;
 }
 
 // 定义 Pair 类型

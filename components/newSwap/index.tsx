@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
+
+// 调试模式开关
+const DEBUG_MODE = false;
+
+// 调试日志函数
+const debugLog = (...args: unknown[]) => {
+  if (DEBUG_MODE) {
+    console.log(...args);
+  }
+};
 import { parseUnits, formatUnits } from "viem";
+import { useSimulateContract } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +31,7 @@ import usePoolManagerWithClients from "@/hooks/usePoolManagerWithClients";
 import useSwapRouterWithClients from "@/hooks/useSwapRouterWithClients";
 import { PoolInfo } from "@/store/usePoolManagerStore";
 import { useWallet } from "@/provider";
+import swapRouterAbi from "@/lib/abi/SwapRouter.json";
 
 // 费率选项
 const FEE_TIERS = [
@@ -73,8 +85,18 @@ export const NewSwap = () => {
 
   useEffect(() => {
     // 每次组件加载时获取最新的池子信息
-    fetchAllPools();
-  }, []);
+    const loadPools = async () => {
+      try {
+        debugLog("🔍 调试: 开始获取池子信息...");
+        await fetchAllPools();
+        debugLog("🔍 调试: 池子信息获取完成");
+      } catch (error) {
+        debugLog("🔍 调试: 获取池子信息失败:", error);
+      }
+    };
+
+    loadPools();
+  }, [fetchAllPools]);
 
   // 初始化代币选择
   useEffect(() => {
@@ -88,22 +110,53 @@ export const NewSwap = () => {
     }
   }, [inTokens, outTokens, inputToken, outputToken]);
 
+  // 监听费率变化
+  useEffect(() => {
+    debugLog("🔍 调试: 费率变化", {
+      selectedFee: selectedFee,
+      availablePoolsLength: availablePools.length,
+      selectedPoolExists: !!selectedPool
+    });
+  }, [selectedFee]);
+
   // 根据选择的代币对筛选可用的池子
   const availablePools = useMemo(() => {
     if (!inputToken || !outputToken || !poolsInfo || poolsInfo.length === 0) {
+      debugLog("🔍 调试: availablePools 过滤条件不满足:", {
+        hasInputToken: !!inputToken,
+        hasOutputToken: !!outputToken,
+        hasPoolsInfo: !!poolsInfo,
+        poolsInfoLength: poolsInfo?.length
+      });
       return [];
     }
 
+    debugLog("🔍 调试: 开始过滤池子，总池子数:", poolsInfo.length);
+    debugLog("🔍 调试: 输入代币地址:", inputToken.address);
+    debugLog("🔍 调试: 输出代币地址:", outputToken.address);
+
     // 筛选包含所选代币对的池子
-    return poolsInfo.filter((pool) => {
+    const filteredPools = poolsInfo.filter((pool) => {
       const matchesTokens =
         (pool.token0.toLowerCase() === inputToken.address.toLowerCase() &&
           pool.token1.toLowerCase() === outputToken.address.toLowerCase()) ||
         (pool.token0.toLowerCase() === outputToken.address.toLowerCase() &&
           pool.token1.toLowerCase() === inputToken.address.toLowerCase());
 
+      if (matchesTokens) {
+        debugLog("🔍 调试: 找到匹配池子:", {
+          pool: pool.pool,
+          token0: pool.token0,
+          token1: pool.token1,
+          fee: pool.fee
+        });
+      }
+
       return matchesTokens;
     });
+
+    debugLog("🔍 调试: 过滤后的池子数量:", filteredPools.length);
+    return filteredPools;
   }, [inputToken, outputToken, poolsInfo]);
 
   // 根据选择的代币对获取可用的费率
@@ -124,15 +177,68 @@ export const NewSwap = () => {
 
   // 获取当前选择的池子
   const selectedPool = useMemo(() => {
-    if (availablePools.length === 0) return null;
+    if (availablePools.length === 0) {
+      debugLog("🔍 调试: availablePools 为空数组");
+      debugLog("🔍 调试: poolsInfo 数据:", poolsInfo);
+      debugLog("🔍 调试: inputToken:", inputToken?.symbol, inputToken?.address);
+      debugLog("🔍 调试: outputToken:", outputToken?.symbol, outputToken?.address);
+      return null;
+    }
 
     // 根据选择的费率筛选池子
     const poolsWithSelectedFee = availablePools.filter(
       (pool) => pool.fee === selectedFee
     );
 
+    debugLog("🔍 调试: availablePools 长度:", availablePools.length);
+    debugLog("🔍 调试: selectedFee:", selectedFee);
+    debugLog("🔍 调试: poolsWithSelectedFee 长度:", poolsWithSelectedFee.length);
+    debugLog("🔍 调试: availablePools 费率列表:", availablePools.map(p => p.fee));
+
+    // 如果没有找到精确匹配的费率，选择最接近的可用费率
+    if (poolsWithSelectedFee.length === 0 && availablePools.length > 0) {
+      debugLog("🔍 调试: 未找到精确匹配费率，寻找最接近的费率");
+
+      // 计算费率差异并选择最接近的
+      const poolWithClosestFee = availablePools.reduce((closest, current) => {
+        const closestDiff = Math.abs(closest.fee - selectedFee);
+        const currentDiff = Math.abs(current.fee - selectedFee);
+        return currentDiff < closestDiff ? current : closest;
+      });
+
+      debugLog("🔍 调试: 选择最接近的费率池子:", {
+        selectedFee: selectedFee,
+        closestFee: poolWithClosestFee.fee,
+        pool: poolWithClosestFee.pool
+      });
+
+      // 自动更新选择的费率 - 使用 useEffect 来避免在 useMemo 中调用 setState
+      return poolWithClosestFee;
+    }
+
     return poolsWithSelectedFee.length > 0 ? poolsWithSelectedFee[0] : null;
-  }, [availablePools, selectedFee]);
+  }, [availablePools, selectedFee, poolsInfo, inputToken, outputToken]);
+
+  // 如果没有找到精确匹配的费率，自动更新选择的费率
+  useEffect(() => {
+    if (availablePools.length > 0) {
+      const poolsWithSelectedFee = availablePools.filter(
+        (pool) => pool.fee === selectedFee
+      );
+
+      if (poolsWithSelectedFee.length === 0) {
+        const poolWithClosestFee = availablePools.reduce((closest, current) => {
+          const closestDiff = Math.abs(closest.fee - selectedFee);
+          const currentDiff = Math.abs(current.fee - selectedFee);
+          return currentDiff < closestDiff ? current : closest;
+        });
+
+        if (poolWithClosestFee.fee !== selectedFee) {
+          setSelectedFee(poolWithClosestFee.fee);
+        }
+      }
+    }
+  }, [availablePools, selectedFee, setSelectedFee]);
 
   // 简单的价格计算函数（作为备用）
   const calculateOutputAmount = useCallback(
@@ -158,10 +264,16 @@ export const NewSwap = () => {
           selectedPool.token0.toLowerCase() === fromToken.address.toLowerCase()
         ) {
           // 如果输入代币是 token0，使用正向价格
-          rate = Number(selectedPool.sqrtPriceX96) ** 2 / 2 ** 192;
+          const sqrtPrice = typeof selectedPool.sqrtPriceX96 === 'bigint'
+            ? Number(selectedPool.sqrtPriceX96)
+            : Number(BigInt(selectedPool.sqrtPriceX96 || "0"));
+          rate = sqrtPrice ** 2 / 2 ** 192;
         } else {
           // 如果输入代币是 token1，使用反向价格
-          rate = 2 ** 192 / Number(selectedPool.sqrtPriceX96) ** 2;
+          const sqrtPrice = typeof selectedPool.sqrtPriceX96 === 'bigint'
+            ? Number(selectedPool.sqrtPriceX96)
+            : Number(BigInt(selectedPool.sqrtPriceX96 || "0"));
+          rate = 2 ** 192 / sqrtPrice ** 2;
         }
 
         // 应用费率
@@ -197,8 +309,37 @@ export const NewSwap = () => {
     [selectedFee, selectedPool]
   );
 
-  // 获取精确的输出金额报价
-  const getExactOutputQuote = useCallback(
+  // 在组件顶层使用 useSimulateContract
+  const simulationParams = useMemo(() => {
+    if (!inputToken || !outputToken || !inputAmount) return null;
+
+    // 安全地获取 sqrtPriceLimitX96
+    const sqrtPriceLimitX96 = selectedPool?.sqrtPriceX96 && selectedPool.sqrtPriceX96 !== "0" && selectedPool.sqrtPriceX96 !== "undefined"
+      ? BigInt(selectedPool.sqrtPriceX96)
+      : 0n;
+
+    return {
+      tokenIn: inputToken.address as `0x${string}`,
+      tokenOut: outputToken.address as `0x${string}`,
+      indexPath: [],
+      amountIn: parseUnits(inputAmount, inputToken.decimals),
+      sqrtPriceLimitX96: sqrtPriceLimitX96,
+    };
+  }, [inputToken, outputToken, inputAmount, selectedPool]);
+
+  // 模拟调用 hook
+  const simulation = useSimulateContract({
+    address: "0xD2c220143F5784b3bD84ae12747d97C8A36CeCB2" as `0x${string}`,
+    abi: swapRouterAbi,
+    functionName: "quoteExactInput",
+    args: simulationParams ? [simulationParams] : undefined,
+    query: {
+      enabled: !!simulationParams && simulationParams.amountIn > 0n,
+    },
+  });
+
+  // 调试版本的获取精确输出金额报价
+  const debugGetExactOutputQuote = useCallback(
     async (inputToken: Token, outputToken: Token, inputAmount: string) => {
       if (
         !inputToken ||
@@ -206,34 +347,179 @@ export const NewSwap = () => {
         !inputAmount ||
         parseFloat(inputAmount) <= 0
       ) {
-        return "0";
+        debugLog("🔍 调试: 参数验证失败");
+        return {
+          success: false,
+          error: "参数验证失败",
+          result: "0",
+        };
       }
 
-      // 确定使用的费率
+      debugLog("🔍 调试: 开始调试调用");
+      debugLog("🔍 调试: 输入参数:", {
+        inputToken: inputToken.symbol,
+        outputToken: outputToken.symbol,
+        inputAmount,
+        selectedPool: selectedPool?.pool,
+      });
+
+      // 使用用户实际输入的金额
+      const testAmount = inputAmount;
+      debugLog("🔍 调试: 使用测试金额:", testAmount);
 
       try {
-        setQuoteLoading(true);
-        // 使用 quoteExactInput 获取准确的输出金额
+        // 构建报价参数 - 修复SPL错误
+        let sqrtPriceLimitX96: bigint;
+        if (selectedPool?.sqrtPriceX96 && selectedPool.sqrtPriceX96 !== "0" && selectedPool.sqrtPriceX96 !== "undefined") {
+          // 如果池子有价格，使用合适的价格限制
+          const currentSqrtPriceX96 = BigInt(selectedPool.sqrtPriceX96);
+          const zeroForOne = inputToken.address.toLowerCase() < outputToken.address.toLowerCase();
+
+          if (zeroForOne) {
+            // token0 -> token1: 价格限制应该低于当前价格
+            sqrtPriceLimitX96 = currentSqrtPriceX96 * 9999n / 10000n; // 稍微低于当前价格
+          } else {
+            // token1 -> token0: 价格限制应该高于当前价格
+            sqrtPriceLimitX96 = currentSqrtPriceX96 * 10001n / 10000n; // 稍微高于当前价格
+          }
+        } else {
+          // 如果没有池子价格，使用0表示无价格限制
+          sqrtPriceLimitX96 = 0n;
+        }
+
         const quoteParams = {
           tokenIn: inputToken.address as `0x${string}`,
           tokenOut: outputToken.address as `0x${string}`,
-          indexPath: selectedPool ? [selectedPool.index] : [0],
-          // amountIn: "0.001",
-          amountIn: parseUnits(`0.000000000000000002`, inputToken.decimals),
-          sqrtPriceLimitX96: 0n,
+          indexPath: [],
+          amountIn: parseUnits(testAmount, inputToken.decimals),
+          sqrtPriceLimitX96: sqrtPriceLimitX96,
         };
 
+        debugLog("🔍 调试: 报价参数:", {
+          ...quoteParams,
+          amountIn: quoteParams.amountIn.toString(),
+          sqrtPriceLimitX96: quoteParams.sqrtPriceLimitX96.toString(),
+        });
+
+        debugLog("🔍 调试: 检查池子信息...");
+        if (selectedPool) {
+          debugLog("🔍 调试: 选中池子详情:", {
+            pool: selectedPool.pool,
+            index: selectedPool.index,
+            token0: selectedPool.token0,
+            token1: selectedPool.token1,
+            fee: selectedPool.fee,
+            liquidity: selectedPool.liquidity.toString(),
+            sqrtPriceX96: selectedPool.sqrtPriceX96.toString(),
+          });
+        } else {
+          debugLog("🔍 调试: 未选中池子，使用空 indexPath");
+        }
+
+        // 使用组件顶层的模拟调用结果
+        if (simulation.isLoading) {
+          debugLog("🔍 调试: 模拟调用进行中...");
+        }
+
+        if (simulation.error) {
+          debugLog("🔍 调试: 模拟调用失败:", simulation.error);
+          debugLog("🔍 调试: 错误详情:", {
+            message: simulation.error.message,
+            name: simulation.error.name,
+            stack: simulation.error.stack,
+            cause: simulation.error.cause,
+          });
+
+          // 安全地访问可能的额外属性
+          const errorDetails = {
+            shortMessage: (simulation.error as { shortMessage?: string }).shortMessage,
+            details: (simulation.error as { details?: unknown }).details,
+            code: (simulation.error as { code?: unknown }).code,
+          };
+
+          debugLog("🔍 调试: 额外错误信息:", errorDetails);
+
+          return {
+            success: false,
+            error: simulation.error.message || "模拟调用失败",
+            errorName: simulation.error.name,
+            errorDetails: errorDetails,
+            result: "0",
+          };
+        }
+
+        if (!simulation.data) {
+          debugLog("🔍 调试: 模拟调用没有返回数据");
+          return {
+            success: false,
+            error: "模拟调用没有返回数据",
+            result: "0",
+          };
+        }
+
+        debugLog("🔍 调试: 模拟调用成功！", {
+          result: simulation.data.result,
+          request: simulation.data.request,
+        });
+
+        // 如果模拟成功，再进行实际调用
+        setQuoteLoading(true);
         const expectedOutput = await quoteExactInput(quoteParams);
-        return formatUnits(expectedOutput, outputToken.decimals);
+        debugLog("🔍 调试: 实际调用成功:", expectedOutput.toString());
+
+        const formattedOutput = formatUnits(
+          expectedOutput,
+          outputToken.decimals
+        );
+
+        return {
+          success: true,
+          result: formattedOutput,
+          rawResult: expectedOutput.toString(),
+          inputAmount: testAmount,
+          inputToken: inputToken.symbol,
+          outputToken: outputToken.symbol,
+        };
       } catch (error) {
-        console.error("获取报价失败:", error);
-        // 如果报价失败，使用简单计算作为回退方案
-        return calculateOutputAmount(inputAmount, inputToken, outputToken);
+        debugLog("🔍 调试: 完整错误信息:", error);
+        debugLog("🔍 调试: 错误类型:", typeof error);
+
+        // 安全地访问错误属性
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorName = error instanceof Error ? error.name : 'UnknownError';
+        const errorStack = error instanceof Error ? error.stack : undefined;
+
+        debugLog("🔍 调试: 错误结构:", {
+          message: errorMessage,
+          name: errorName,
+          stack: errorStack,
+        });
+
+        // 尝试获取额外的错误信息
+        const errorDetails = {
+          code: (error as { code?: unknown }).code,
+          data: (error as { data?: unknown }).data,
+          cause: (error as { cause?: unknown }).cause,
+        };
+
+        return {
+          success: false,
+          error: errorMessage,
+          errorName: errorName,
+          errorDetails: errorDetails,
+          result: "0",
+        };
       } finally {
         setQuoteLoading(false);
       }
     },
-    [selectedPool, selectedFee, quoteExactInput, calculateOutputAmount]
+    [
+      selectedPool,
+      selectedFee,
+      quoteExactInput,
+      calculateOutputAmount,
+      simulation,
+    ]
   );
 
   // 获取精确的输入金额报价
@@ -254,9 +540,11 @@ export const NewSwap = () => {
         const quoteParams = {
           tokenIn: inputToken.address as `0x${string}`,
           tokenOut: outputToken.address as `0x${string}`,
-          indexPath: selectedPool ? [selectedPool.index] : [0],
+          indexPath: [],
           amountOut: parseUnits(outputAmount, outputToken.decimals),
-          sqrtPriceLimitX96: selectedPool ? selectedPool.sqrtPriceX96 : 0n,
+          sqrtPriceLimitX96: selectedPool?.sqrtPriceX96 && selectedPool.sqrtPriceX96 !== "0" && selectedPool.sqrtPriceX96 !== "undefined"
+            ? BigInt(selectedPool.sqrtPriceX96)
+            : 0n,
         };
 
         const requiredInput = await quoteExactOutput(quoteParams);
@@ -276,10 +564,16 @@ export const NewSwap = () => {
             inputToken.address.toLowerCase()
           ) {
             // 如果输入代币是 token0，使用正向价格
-            rate = Number(selectedPool.sqrtPriceX96) ** 2 / 2 ** 192;
+            const sqrtPrice = typeof selectedPool.sqrtPriceX96 === 'bigint'
+              ? Number(selectedPool.sqrtPriceX96)
+              : Number(BigInt(selectedPool.sqrtPriceX96 || "0"));
+            rate = sqrtPrice ** 2 / 2 ** 192;
           } else {
             // 如果输入代币是 token1，使用反向价格
-            rate = 2 ** 192 / Number(selectedPool.sqrtPriceX96) ** 2;
+            const sqrtPrice = typeof selectedPool.sqrtPriceX96 === 'bigint'
+              ? Number(selectedPool.sqrtPriceX96)
+              : Number(BigInt(selectedPool.sqrtPriceX96 || "0"));
+            rate = 2 ** 192 / sqrtPrice ** 2;
           }
         } else {
           // 使用简单的价格估算
@@ -347,18 +641,8 @@ export const NewSwap = () => {
         outputToken
       );
       setOutputAmount(estimatedOutput);
-
-      // 然后获取精确报价
-      const exactOutput = await getExactOutputQuote(
-        inputToken,
-        outputToken,
-        value
-      );
-      if (exactOutput !== "0") {
-        setOutputAmount(exactOutput);
-      }
     },
-    [inputToken, outputToken, calculateOutputAmount, getExactOutputQuote]
+    [inputToken, outputToken, calculateOutputAmount]
   );
 
   // 处理输出金额变化
@@ -379,9 +663,15 @@ export const NewSwap = () => {
         if (
           selectedPool.token0.toLowerCase() === inputToken.address.toLowerCase()
         ) {
-          rate = Number(selectedPool.sqrtPriceX96) ** 2 / 2 ** 192;
+          const sqrtPrice = typeof selectedPool.sqrtPriceX96 === 'bigint'
+            ? Number(selectedPool.sqrtPriceX96)
+            : Number(BigInt(selectedPool.sqrtPriceX96 || "0"));
+          rate = sqrtPrice ** 2 / 2 ** 192;
         } else {
-          rate = 2 ** 192 / Number(selectedPool.sqrtPriceX96) ** 2;
+          const sqrtPrice = typeof selectedPool.sqrtPriceX96 === 'bigint'
+            ? Number(selectedPool.sqrtPriceX96)
+            : Number(BigInt(selectedPool.sqrtPriceX96 || "0"));
+          rate = 2 ** 192 / sqrtPrice ** 2;
         }
       } else {
         // 简单价格估算
@@ -462,32 +752,17 @@ export const NewSwap = () => {
 
         if (inputAmount && outputToken) {
           // 更新输出金额
-          const exactOutput = await getExactOutputQuote(
+
+          const calculatedOutput = calculateOutputAmount(
+            inputAmount,
             token,
-            outputToken,
-            inputAmount
+            outputToken
           );
-          if (exactOutput !== "0") {
-            setOutputAmount(exactOutput);
-          } else {
-            const calculatedOutput = calculateOutputAmount(
-              inputAmount,
-              token,
-              outputToken
-            );
-            setOutputAmount(calculatedOutput);
-          }
+          setOutputAmount(calculatedOutput);
         }
       }
     },
-    [
-      inTokens,
-      inputAmount,
-      outputToken,
-      inputToken,
-      getExactOutputQuote,
-      calculateOutputAmount,
-    ]
+    [inTokens, inputAmount, outputToken, inputToken, calculateOutputAmount]
   );
 
   const handleSelectOutputToken = useCallback(
@@ -504,32 +779,17 @@ export const NewSwap = () => {
 
         if (inputAmount && inputToken) {
           // 更新输出金额
-          const exactOutput = await getExactOutputQuote(
+
+          const calculatedOutput = calculateOutputAmount(
+            inputAmount,
             inputToken,
-            token,
-            inputAmount
+            token
           );
-          if (exactOutput !== "0") {
-            setOutputAmount(exactOutput);
-          } else {
-            const calculatedOutput = calculateOutputAmount(
-              inputAmount,
-              inputToken,
-              token
-            );
-            setOutputAmount(calculatedOutput);
-          }
+          setOutputAmount(calculatedOutput);
         }
       }
     },
-    [
-      outTokens,
-      inputAmount,
-      inputToken,
-      outputToken,
-      getExactOutputQuote,
-      calculateOutputAmount,
-    ]
+    [outTokens, inputAmount, inputToken, outputToken, calculateOutputAmount]
   );
 
   // 处理费率选择
@@ -539,31 +799,15 @@ export const NewSwap = () => {
 
       // 更新输出金额计算
       if (inputAmount && inputToken && outputToken) {
-        // 更新输出金额
-        const exactOutput = await getExactOutputQuote(
+        const calculatedOutput = calculateOutputAmount(
+          inputAmount,
           inputToken,
-          outputToken,
-          inputAmount
+          outputToken
         );
-        if (exactOutput !== "0") {
-          setOutputAmount(exactOutput);
-        } else {
-          const calculatedOutput = calculateOutputAmount(
-            inputAmount,
-            inputToken,
-            outputToken
-          );
-          setOutputAmount(calculatedOutput);
-        }
+        setOutputAmount(calculatedOutput);
       }
     },
-    [
-      inputAmount,
-      inputToken,
-      outputToken,
-      getExactOutputQuote,
-      calculateOutputAmount,
-    ]
+    [inputAmount, inputToken, outputToken, calculateOutputAmount]
   );
 
   // 设置最大金额
@@ -571,53 +815,20 @@ export const NewSwap = () => {
     if (inputToken && inputToken.balance) {
       setInputAmount(inputToken.balance);
       if (outputToken) {
-        // 更新输出金额
-        const exactOutput = await getExactOutputQuote(
+        const calculatedOutput = calculateOutputAmount(
+          inputToken.balance,
           inputToken,
-          outputToken,
-          inputToken.balance
+          outputToken
         );
-        if (exactOutput !== "0") {
-          setOutputAmount(exactOutput);
-        } else {
-          const calculatedOutput = calculateOutputAmount(
-            inputToken.balance,
-            inputToken,
-            outputToken
-          );
-          setOutputAmount(calculatedOutput);
-        }
+        setOutputAmount(calculatedOutput);
       }
     }
-  }, [inputToken, outputToken, getExactOutputQuote, calculateOutputAmount]);
+  }, [inputToken, outputToken, calculateOutputAmount]);
 
   // 刷新价格信息
   const handleRefreshPrice = useCallback(async () => {
-    if (!inputToken || !outputToken) return;
-
-    try {
-      // 获取1个代币的报价
-      const oneTokenQuote = await getExactOutputQuote(
-        inputToken,
-        outputToken,
-        "1"
-      );
-
-      // 如果有输入金额，更新输出金额
-      if (inputAmount) {
-        const exactOutput = await getExactOutputQuote(
-          inputToken,
-          outputToken,
-          inputAmount
-        );
-        if (exactOutput !== "0") {
-          setOutputAmount(exactOutput);
-        }
-      }
-    } catch (error) {
-      console.error("刷新价格失败:", error);
-    }
-  }, [inputToken, outputToken, inputAmount, getExactOutputQuote]);
+    console.log("价格更新了");
+  }, [inputToken, outputToken, inputAmount]);
 
   // 执行交换
   const handleSwap = useCallback(async () => {
@@ -632,12 +843,75 @@ export const NewSwap = () => {
     }
 
     if (!selectedPool && availablePools.length === 0) {
+      debugLog("🔍 调试: 交换失败 - 无可用交易池", {
+        inputToken: inputToken?.symbol,
+        inputTokenAddress: inputToken?.address,
+        outputToken: outputToken?.symbol,
+        outputTokenAddress: outputToken?.address,
+        totalPoolsCount: poolsInfo?.length,
+        poolsInfo: poolsInfo?.map(p => ({
+          pool: p.pool,
+          token0: p.token0,
+          token1: p.token1,
+          fee: p.fee
+        }))
+      });
       toast({
         title: "无可用交易池",
         description: `未找到 ${inputToken.symbol}/${outputToken.symbol} 交易对的池子`,
         variant: "destructive",
       });
       return;
+    } else if (!selectedPool && availablePools.length > 0) {
+      debugLog("🔍 调试: 交换失败 - 找到池子但没有匹配费率", {
+        availablePoolsCount: availablePools.length,
+        selectedFee: selectedFee,
+        availableFees: availablePools.map(p => p.fee)
+      });
+      toast({
+        title: "无匹配费率池子",
+        description: `找到 ${availablePools.length} 个池子，但没有费率为 ${selectedFee/10000}% 的池子`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 检查池子状态 - 修复1000兑换0的问题
+    if (selectedPool) {
+      console.log("🔍 池子状态检查:", {
+        sqrtPriceX96: selectedPool.sqrtPriceX96,
+        liquidity: selectedPool.liquidity,
+        tick: selectedPool.tick,
+        token0: selectedPool.token0,
+        token1: selectedPool.token1,
+        fee: selectedPool.fee
+      });
+
+      // 检查池子是否有流动性
+      if (!selectedPool.liquidity ||
+          (typeof selectedPool.liquidity === 'string' && selectedPool.liquidity === "0") ||
+          (typeof selectedPool.liquidity === 'bigint' && selectedPool.liquidity === 0n) ||
+          (typeof selectedPool.liquidity === 'string' && selectedPool.liquidity !== "0" && BigInt(selectedPool.liquidity) === 0n)) {
+        toast({
+          title: "池子流动性不足",
+          description: "当前交易池没有足够的流动性，请添加流动性或选择其他交易对",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 检查池子是否已初始化
+      if (!selectedPool.sqrtPriceX96 ||
+          (typeof selectedPool.sqrtPriceX96 === 'string' && selectedPool.sqrtPriceX96 === "0") ||
+          (typeof selectedPool.sqrtPriceX96 === 'bigint' && selectedPool.sqrtPriceX96 === 0n) ||
+          (typeof selectedPool.sqrtPriceX96 === 'string' && selectedPool.sqrtPriceX96 !== "0" && BigInt(selectedPool.sqrtPriceX96) === 0n)) {
+        toast({
+          title: "池子未初始化",
+          description: "当前交易池尚未初始化，请先添加流动性",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -645,13 +919,40 @@ export const NewSwap = () => {
 
     try {
       // 准备报价参数
+      // 安全地获取 sqrtPriceLimitX96 - 修复SPL错误
+      let sqrtPriceLimitX96: bigint;
+      if (selectedPool?.sqrtPriceX96 && selectedPool.sqrtPriceX96 !== "0" && selectedPool.sqrtPriceX96 !== "undefined") {
+        // 如果池子有价格，使用合适的价格限制
+        const currentSqrtPriceX96 = BigInt(selectedPool.sqrtPriceX96);
+        const zeroForOne = inputToken.address.toLowerCase() < outputToken.address.toLowerCase();
+
+        if (zeroForOne) {
+          // token0 -> token1: 价格限制应该低于当前价格
+          sqrtPriceLimitX96 = currentSqrtPriceX96 * 9999n / 10000n; // 稍微低于当前价格
+        } else {
+          // token1 -> token0: 价格限制应该高于当前价格
+          sqrtPriceLimitX96 = currentSqrtPriceX96 * 10001n / 10000n; // 稍微高于当前价格
+        }
+      } else {
+        // 如果没有池子价格，使用0表示无价格限制
+        sqrtPriceLimitX96 = 0n;
+      }
+
       const quoteParams = {
         tokenIn: inputToken.address as `0x${string}`,
         tokenOut: outputToken.address as `0x${string}`,
-        indexPath: selectedPool ? [selectedPool.index] : [0],
+        indexPath: [],
         amountIn: parseUnits(inputAmount, inputToken.decimals),
-        sqrtPriceLimitX96: selectedPool ? selectedPool.sqrtPriceX96 : 0n,
+        sqrtPriceLimitX96: sqrtPriceLimitX96,
       };
+
+      console.log("🔍 交换报价参数:", {
+        ...quoteParams,
+        amountIn: quoteParams.amountIn.toString(),
+        sqrtPriceLimitX96: quoteParams.sqrtPriceLimitX96.toString(),
+        selectedPoolExists: !!selectedPool,
+        selectedPoolSqrtPrice: selectedPool?.sqrtPriceX96,
+      });
 
       // 显示获取报价中
       toast({
@@ -669,9 +970,10 @@ export const NewSwap = () => {
         );
       } catch (quoteError) {
         console.error("获取报价失败:", quoteError);
+        const errorMessage = quoteError instanceof Error ? quoteError.message : "无法获取交易报价，请稍后重试";
         toast({
           title: "获取报价失败",
-          description: quoteError.message || "无法获取交易报价，请稍后重试",
+          description: errorMessage,
           variant: "destructive",
         });
         setIsLoading(false);
@@ -693,7 +995,7 @@ export const NewSwap = () => {
       const params = {
         tokenIn: inputToken.address as `0x${string}`,
         tokenOut: outputToken.address as `0x${string}`,
-        indexPath: selectedPool ? [selectedPool.index] : [0], // 使用池子索引路径
+        indexPath: [], // 使用池子索引路径
         recipient: address as `0x${string}`, // 添加接收者地址
         deadline: BigInt(deadlineTimestamp),
         amountIn: parseUnits(inputAmount, inputToken.decimals),
@@ -701,7 +1003,7 @@ export const NewSwap = () => {
           amountOutMinimum.toString(),
           outputToken.decimals
         ),
-        sqrtPriceLimitX96: selectedPool ? selectedPool.sqrtPriceX96 : 0n, // 使用池子价格限制或默认0
+        sqrtPriceLimitX96: sqrtPriceLimitX96, // 使用之前安全获取的值
       };
 
       console.log("交换参数:", {
@@ -744,27 +1046,44 @@ export const NewSwap = () => {
 
       // 交换完成后刷新余额
       refetchBalances();
-    } catch (error: any) {
+    } catch (error) {
       console.error("交换失败:", error);
 
       // 详细记录错误信息以便调试
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorCode = (error as { code?: unknown }).code;
+      const errorData = (error as { data?: unknown }).data;
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
       console.error("错误详情:", {
-        message: error.message,
-        code: error.code,
-        data: error.data,
-        stack: error.stack,
+        message: errorMessage,
+        code: errorCode,
+        data: errorData,
+        stack: errorStack,
       });
 
       // 处理特定错误
-      if (error.message && error.message.includes("SPL")) {
+      if (errorMessage && errorMessage.includes("SPL")) {
         toast({
-          title: "交易失败",
-          description: "合约执行错误: SPL。可能是池子流动性不足或价格滑点过大",
+          title: "价格限制错误",
+          description: "交易价格超出允许范围，请尝试调整金额或稍后重试",
+          variant: "destructive",
+        });
+      } else if (errorMessage && errorMessage.includes("Pool not found")) {
+        toast({
+          title: "池子不存在",
+          description: "指定的交易池不存在，请刷新页面重试",
+          variant: "destructive",
+        });
+      } else if (errorMessage && errorMessage.includes("Slippage exceeded")) {
+        toast({
+          title: "滑点过大",
+          description: "价格变化过大，请增加滑点容忍度或稍后重试",
           variant: "destructive",
         });
       } else if (
-        error.code === 4001 ||
-        (error.message && error.message.includes("user rejected"))
+        errorCode === 4001 ||
+        (errorMessage && errorMessage.includes("user rejected"))
       ) {
         toast({
           title: "交易被取消",
@@ -774,7 +1093,7 @@ export const NewSwap = () => {
       } else {
         toast({
           title: "交换失败",
-          description: error.message || "未知错误",
+          description: errorMessage || "未知错误",
           variant: "destructive",
         });
       }
@@ -991,9 +1310,42 @@ export const NewSwap = () => {
             </Select>
           </div>
 
-          <div className="text-xs text-muted-foreground">
-            余额:{" "}
-            {outputToken ? `${outputToken.balance} ${outputToken.symbol}` : "0"}
+          <div className="flex justify-between items-center">
+            <div className="text-xs text-muted-foreground">
+              余额:{" "}
+              {outputToken ? `${outputToken.balance} ${outputToken.symbol}` : "0"}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                if (inputToken && outputToken && inputAmount) {
+                  console.log("🔍 开始调试 SPL 错误...");
+                  const result = await debugGetExactOutputQuote(inputToken, outputToken, inputAmount);
+
+                  // 显示结果给用户
+                  if (typeof result === "object" && result.success) {
+                    // 设置输出金额到界面
+                    setOutputAmount(result.result);
+
+                    toast({
+                      title: "调试成功！",
+                      description: `输入: ${result.inputAmount} ${result.inputToken} → 输出: ${result.result} ${result.outputToken}`,
+                    });
+                  } else if (typeof result === "object" && !result.success) {
+                    toast({
+                      title: "调试失败",
+                      description: result.error || "未知错误",
+                      variant: "destructive",
+                    });
+                  }
+                }
+              }}
+              disabled={!inputToken || !outputToken || !inputAmount}
+              className="h-6 text-xs px-2"
+            >
+              🐛 调试
+            </Button>
           </div>
         </div>
 
@@ -1062,8 +1414,10 @@ export const NewSwap = () => {
             <div className="text-xs text-muted-foreground">
               使用池子: {selectedPool.pool.substring(0, 6)}...
               {selectedPool.pool.substring(38)}
-              {selectedPool.liquidity > 0n && (
-                <span> · 流动性: {formatUnits(selectedPool.liquidity, 0)}</span>
+              {selectedPool.liquidity &&
+                ((typeof selectedPool.liquidity === 'bigint' && selectedPool.liquidity > 0n) ||
+                 (typeof selectedPool.liquidity === 'string' && BigInt(selectedPool.liquidity) > 0n)) && (
+                <span> · 流动性: {formatUnits(typeof selectedPool.liquidity === 'bigint' ? selectedPool.liquidity : BigInt(selectedPool.liquidity), 0)}</span>
               )}
             </div>
           )}

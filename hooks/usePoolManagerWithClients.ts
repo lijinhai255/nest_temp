@@ -1,4 +1,5 @@
 // usePoolManagerWithClients.ts
+import { useCallback } from 'react';
 import { usePublicClient, useWalletClient } from './usePublicClient';
 import { Address } from 'viem';
 import { useWallet } from '@/provider';
@@ -23,12 +24,12 @@ export const usePoolManagerWithClients = () => {
   };
 
   // 包装读取方法
-  const fetchAllPools = async () => {
+  const fetchAllPools = useCallback(async () => {
     if (!publicClient) {
       throw new Error('PublicClient 未初始化');
     }
     return store.fetchAllPools(publicClient);
-  };
+  }, [publicClient, store.fetchAllPools]);
 
   const fetchPairs = async () => {
     if (!publicClient) {

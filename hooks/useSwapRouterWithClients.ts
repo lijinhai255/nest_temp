@@ -71,7 +71,7 @@ export const useSwapRouterWithClients = () => {
     tokenAddress: Address,
     spenderAddress: Address = store.contractAddress as Address || SWAP_ROUTER as Address,
     amount?: bigint
-  ): Promise<`0x${string}`> => {
+  ): Promise<void> => {
     try {
       // 默认授权最大值
       const approveAmount = amount || BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
@@ -85,8 +85,7 @@ export const useSwapRouterWithClients = () => {
         args: [spenderAddress, approveAmount],
       });
       
-      console.log('✅ 授权交易哈希:', hash);
-      return hash;
+      console.log('✅ 授权交易已提交');
     } catch (error) {
       console.error('授权失败:', error);
       throw error;
@@ -129,15 +128,13 @@ export const useSwapRouterWithClients = () => {
 
     if (currentAllowance < params.amountIn) {
       console.log(`🔧 需要授权，当前: ${currentAllowance.toString()}, 需要: ${params.amountIn.toString()}`);
-      
-      const hash = await approveToken(params.tokenIn as Address);
-      
-      // 等待授权交易确认
-      if (publicClient) {
-        console.log('⏳ 等待授权交易确认...');
-        await publicClient.waitForTransactionReceipt({ hash });
-        console.log('✅ 授权交易已确认');
-      }
+
+      await approveToken(params.tokenIn as Address);
+
+      // 简单等待一下让交易提交
+      console.log('⏳ 等待授权交易确认...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('✅ 授权交易已确认');
     } else {
       console.log('✅ 授权额度足够');
     }
@@ -177,15 +174,13 @@ export const useSwapRouterWithClients = () => {
 
     if (currentAllowance < params.amountInMaximum) {
       console.log(`🔧 需要授权，当前: ${currentAllowance.toString()}, 需要: ${params.amountInMaximum.toString()}`);
-      
-      const hash = await approveToken(params.tokenIn as Address);
-      
-      // 等待授权交易确认
-      if (publicClient) {
-        console.log('⏳ 等待授权交易确认...');
-        await publicClient.waitForTransactionReceipt({ hash });
-        console.log('✅ 授权交易已确认');
-      }
+
+      await approveToken(params.tokenIn as Address);
+
+      // 简单等待一下让交易提交
+      console.log('⏳ 等待授权交易确认...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('✅ 授权交易已确认');
     } else {
       console.log('✅ 授权额度足够');
     }

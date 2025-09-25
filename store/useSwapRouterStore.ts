@@ -1,12 +1,13 @@
 import { create } from 'zustand';
-import { 
-  Address, 
-  PublicClient, 
+import {
+  Address,
+  PublicClient,
   WalletClient,
   TransactionReceipt,
   Abi,
   Chain,
-  Hex
+  Hex,
+  decodeEventLog
 } from 'viem';
 import SwapRouterABI from '@/lib/abi/SwapRouter.json';
 import { isValidAddress } from '@/utils'; // 导入地址验证函数
@@ -251,7 +252,7 @@ exactInput: async (
       for (const log of receipt.logs) {
         try {
           if (log.address.toLowerCase() === contractAddress.toLowerCase()) {
-            const event = publicClient.decodeEventLog({
+            const event = decodeEventLog({
               abi: typedSwapRouterABI,
               data: log.data,
               topics: log.topics,
@@ -342,7 +343,7 @@ exactOutput: async (
       for (const log of receipt.logs) {
         try {
           if (log.address.toLowerCase() === contractAddress.toLowerCase()) {
-            const event = publicClient.decodeEventLog({
+            const event = decodeEventLog({
               abi: typedSwapRouterABI,
               data: log.data,
               topics: log.topics,
@@ -529,7 +530,7 @@ exactOutput: async (
         for (const log of receipt.logs) {
           try {
             if (log.address.toLowerCase() === contractAddress.toLowerCase()) {
-              const event = publicClient.decodeEventLog({
+              const event = decodeEventLog({
                 abi: typedSwapRouterABI,
                 data: log.data,
                 topics: log.topics,

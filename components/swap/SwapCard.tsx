@@ -36,6 +36,8 @@ import PlaceholderTab from "./PlaceholderTab";
 import FeeRateSelector from "./FeeRateSelector"; // 导入费率选择组件
 import { useToast } from "@/hooks/use-toast";
 // 导入类型
+import { PoolInfo } from "@/store/usePoolManagerStore";
+import { SwapQuote } from "./types";
 import { SwapSettings, TradeAnalysis } from "./types";
 import useSwapRouterWithClients from "@/hooks/useSwapRouterWithClients";
 import { Address } from "viem";
@@ -52,7 +54,7 @@ interface SwapCardProps {
   setIsAdvancedMode: (value: boolean) => void;
   activeTab: string;
   setActiveTab: (value: string) => void;
-  quote: any; // 使用实际的类型
+  quote: SwapQuote | null;
   isRefreshing: boolean;
   isQuoteStale: boolean;
   tradeAnalysis: TradeAnalysis;
@@ -91,7 +93,7 @@ interface SwapCardProps {
   canSwap: boolean;
   refreshQuote: () => void;
   handleRefreshBalances: () => void;
-  poolsInfo?: any[]; // 添加池信息属性
+  poolsInfo?: PoolInfo[]; // 添加池信息属性
 }
 
 const SwapCard: React.FC<SwapCardProps> = ({
@@ -151,11 +153,11 @@ const SwapCard: React.FC<SwapCardProps> = ({
   const [highSlippageMode, setHighSlippageMode] = useState(false); // 添加高滑点模式状态
   // 获取交易对数据
   const { poolsInfo } = usePoolManagerWithClients();
-  const [selectPool, setSelectedPool] = useState(null);
+  const [selectPool, setSelectedPool] = useState<PoolInfo | null>(null);
   console.log("📊 池信息:", poolsInfo);
 
   // 处理费率选择
-  const handleSelectFee = (fee: number, pool?: any) => {
+  const handleSelectFee = (fee: number, pool?: PoolInfo) => {
     setSelectedFee(fee);
     if (pool) {
       setSelectedPool(pool); // 添加一个新的状态来存储选中的池
@@ -372,12 +374,12 @@ const SwapCard: React.FC<SwapCardProps> = ({
           // 使用选择的费率索引构建路径，如果没有选择则使用默认值或报价中的路径
           indexPath: selectedFee
             ? [getFeeIndex(Math.floor(selectedFee * 10000))]
-            : quote.path || [0],
+            : quote?.path || [0],
           recipient: userAddress,
           deadline: deadline,
           amountIn: inputAmountBigInt,
           amountOutMinimum: minOutputAmount,
-          sqrtPriceLimitX96: selectPool?.sqrtPriceX96 || BigInt(0), // 根据费率设置价格限制
+          sqrtPriceLimitX96: selectPool?.sqrtPriceX96 ? (typeof selectPool.sqrtPriceX96 === 'string' ? BigInt(selectPool.sqrtPriceX96) : selectPool.sqrtPriceX96) : BigInt(0), // 根据费率设置价格限制
         };
 
         setLocalSwapProgress(60);
@@ -419,12 +421,12 @@ const SwapCard: React.FC<SwapCardProps> = ({
           // 对于exactOutput也应用相同的费率索引逻辑
           indexPath: selectedFee
             ? [getFeeIndex(Math.floor(selectedFee * 10000))]
-            : quote.path || [0],
+            : quote?.path || [0],
           recipient: userAddress,
           deadline: deadline,
           amountOut: outputAmountBigInt,
           amountInMaximum: maxInputAmount,
-          sqrtPriceLimitX96: selectPool?.sqrtPriceLimitX96 || BigInt(0), // 根据费率设置价格限制
+          sqrtPriceLimitX96: selectPool?.sqrtPriceX96 ? (typeof selectPool.sqrtPriceX96 === 'string' ? BigInt(selectPool.sqrtPriceX96) : selectPool.sqrtPriceX96) : BigInt(0), // 根据费率设置价格限制
         };
 
         setLocalSwapProgress(60);

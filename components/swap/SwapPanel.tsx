@@ -35,7 +35,7 @@ interface SwapPanelProps {
   setToken1: (token: Token | null) => void;
   focusedInput: "input" | "output" | null;
   setFocusedInput: (value: "input" | "output" | null) => void;
-  selectPool: PoolInfo;
+  selectPool: PoolInfo | null;
 }
 
 const SwapPanel: React.FC<SwapPanelProps> = ({
@@ -115,7 +115,7 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
                   placeholder="0.0"
                   value={inputAmount}
                   onChange={(e) =>
-                    handleInputChange(e.target.value, true, selectPool)
+                    handleInputChange(e.target.value, true)
                   }
                   onFocus={() => setFocusedInput("input")}
                   onBlur={() => setFocusedInput(null)}
@@ -234,7 +234,7 @@ const SwapPanel: React.FC<SwapPanelProps> = ({
                   placeholder="0.0"
                   value={outputAmount}
                   onChange={(e) =>
-                    handleInputChange(e.target.value, false, selectPool)
+                    handleInputChange(e.target.value, false)
                   }
                   onFocus={() => setFocusedInput("output")}
                   onBlur={() => setFocusedInput(null)}

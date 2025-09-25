@@ -13,6 +13,7 @@ import {
 import { Settings, Info, Percent, Clock, AlertTriangle } from "lucide-react";
 import { Token } from "@/hooks/useTokenOptions";
 import { cn } from "@/lib/utils";
+import { PoolInfo } from "@/store/usePoolManagerStore";
 
 export interface FeeRate {
   fee: number; // 费率，如 0.05%, 0.3%, 1% 等
@@ -22,15 +23,15 @@ export interface FeeRate {
   liquidityScore: number; // 0-100 流动性评分
   recommended: boolean;
   color: string;
-  pool?: any; // 添加对应的池信息
+  pool?: PoolInfo; // 添加对应的池信息
 }
 
 interface FeeRateSelectorProps {
   token0: Token | null;
   token1: Token | null;
   selectedFee: number | null;
-  onSelectFee: (fee: number, pool?: any) => void; // 修改函数签名，添加池参数
-  poolsInfo?: any[]; // 池信息
+  onSelectFee: (fee: number, pool?: PoolInfo) => void; // 修改函数签名，添加池参数
+  poolsInfo?: PoolInfo[]; // 池信息
   isLoading?: boolean;
 }
 
@@ -43,7 +44,7 @@ const FeeRateSelector: React.FC<FeeRateSelectorProps> = ({
   isLoading = false,
 }) => {
   const [showInfo, setShowInfo] = useState(false);
-  const [selectedPool, setSelectedPool] = useState<any>(null); // 添加选中池的状态
+  const [selectedPool, setSelectedPool] = useState<PoolInfo | null>(null); // 添加选中池的状态
 
   // 基于代币对生成可用费率
   const availableFeeRates = useMemo(() => {
@@ -170,12 +171,12 @@ const FeeRateSelector: React.FC<FeeRateSelectorProps> = ({
       if (recommendedFee) {
         // 同时设置费率和对应的池
         onSelectFee(recommendedFee.fee, recommendedFee.pool);
-        setSelectedPool(recommendedFee.pool);
+        setSelectedPool(recommendedFee.pool || null);
       } else {
         // 默认选择中等费率
         const defaultRate = availableFeeRates[2];
         onSelectFee(defaultRate.fee, defaultRate.pool);
-        setSelectedPool(defaultRate.pool);
+        setSelectedPool(defaultRate.pool || null);
       }
     }
   }, [availableFeeRates, selectedFee, onSelectFee]);
@@ -183,7 +184,7 @@ const FeeRateSelector: React.FC<FeeRateSelectorProps> = ({
   // 处理费率选择，同时记录对应的池
   const handleSelectFee = (rate: FeeRate) => {
     onSelectFee(rate.fee, rate.pool);
-    setSelectedPool(rate.pool);
+    setSelectedPool(rate.pool || null);
     console.log(`已选择费率: ${rate.fee}%, 对应池:`, rate.pool);
   };
 

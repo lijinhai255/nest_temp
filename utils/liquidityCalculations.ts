@@ -151,7 +151,12 @@ export const calculateMaxTradeSize = (
   
   
   // 5. 使用您的函数计算实际的价格影响
-  const priceImpact = calculatePriceImpactFromLiquidity(maxTradeSize, liquidity);
+  const priceImpact = calculatePriceImpactFromLiquidity(
+    maxTradeSize,
+    liquidity,
+    poolInfo.sqrtPriceX96,
+    zeroForOne
+  );
   
   return {
     maxTradeSize,

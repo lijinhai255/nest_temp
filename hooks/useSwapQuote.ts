@@ -48,9 +48,7 @@ interface LiquidityHealthInfo {
 interface LiquidityValidationInfo {
   isSufficient: boolean;
   maxTradeSize: bigint;
-  maxTradeSizeFormatted: string;
   availableLiquidity: bigint;
-  availableLiquidityFormatted: string;
   priceImpact: number;
   reason?: string;
 }
@@ -163,8 +161,8 @@ export const useSwapQuote = (options: UseSwapQuoteOptions = {}) => {
   const [initializationAttempted, setInitializationAttempted] = useState(false);
   
   // Refs
-  const debounceTimerRef = useRef<NodeJS.Timeout>();
-  const autoRefreshTimerRef = useRef<NodeJS.Timeout>();
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastQuoteParamsRef = useRef<{
     tokenIn: Token;
     tokenOut: Token;
@@ -219,7 +217,7 @@ export const useSwapQuote = (options: UseSwapQuoteOptions = {}) => {
     console.log('🔍 useSwapQuote isReady 详细检查:', {
       ...conditions,
       poolsInfoLength: poolsInfo?.length || 0,
-      poolsError: poolsError?.message || null,
+      poolsError: poolsError || null,
       最终结果: ready
     });
     
@@ -262,11 +260,15 @@ export const useSwapQuote = (options: UseSwapQuoteOptions = {}) => {
     const tokenInLower = tokenInAddress.toLowerCase();
     const tokenOutLower = tokenOutAddress.toLowerCase();
     
-    const matchingPools = poolsInfo.filter(pool => 
+    const matchingPools = poolsInfo.filter(pool =>
       (pool.token0.toLowerCase() === tokenInLower && pool.token1.toLowerCase() === tokenOutLower) ||
       (pool.token1.toLowerCase() === tokenInLower && pool.token0.toLowerCase() === tokenOutLower)
-    );
-    
+    ).map(pool => ({
+      ...pool,
+      liquidity: typeof pool.liquidity === 'string' ? BigInt(pool.liquidity) : pool.liquidity,
+      sqrtPriceX96: typeof pool.sqrtPriceX96 === 'string' ? BigInt(pool.sqrtPriceX96) : pool.sqrtPriceX96
+    }));
+
     console.log(`✅ 找到 ${matchingPools.length} 个匹配的池子`);
     return matchingPools;
   }, [poolsInfo]);
@@ -454,8 +456,9 @@ const calculateOutputAmount = useCallback(async (
       const effectivePrice = currentPrice;
 
       // 7. 计算价格影响
-      const priceImpact = calculatePriceImpactV3 ? 
-        calculatePriceImpactV3(amountInBigInt, bestPool.liquidity, bestPool.sqrtPriceX96) : 0;
+      const zeroForOne = bestPool.token0.toLowerCase() === tokenIn.address.toLowerCase();
+      const priceImpact = calculatePriceImpactV3 ?
+        calculatePriceImpactV3(amountInBigInt, bestPool.liquidity, zeroForOne) : 0;
 
       // 8. 计算手续费
       const feeAmount = (amountInBigInt * BigInt(bestPool.fee)) / BigInt(1000000);
@@ -471,9 +474,10 @@ const calculateOutputAmount = useCallback(async (
       if (config.enableLiquidityAnalysis && validateLiquiditySufficiency) {
         try {
           liquidityValidation = validateLiquiditySufficiency(
+            bestPool,
             amountInBigInt,
-            bestPool.liquidity,
-            bestPool.sqrtPriceX96,
+            zeroForOne,
+            tokenIn.decimals,
             tokenOut.decimals
           );
           
@@ -481,10 +485,9 @@ const calculateOutputAmount = useCallback(async (
           
           if (assessLiquidityHealth) {
             liquidityHealth = assessLiquidityHealth(
-              bestPool.liquidity,
-              bestPool.tick,
-              bestPool.tickLower,
-              bestPool.tickUpper
+              bestPool,
+              tokenIn.decimals,
+              tokenOut.decimals
             );
           }
         } catch (error) {
@@ -619,7 +622,7 @@ const calculateOutputAmount = useCallback(async (
     if (debounceTimerRef.current) {
       console.log('🧹 清除之前的定时器');
       clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = undefined;
+      debounceTimerRef.current = null;
     }
 
     // 计算延迟时间

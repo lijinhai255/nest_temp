@@ -1,3 +1,5 @@
+import { Address } from 'viem';
+
 // 合约地址 - 这里使用示例地址，实际使用时需要替换为真实部署的合约地址
 export const RccStakeContract = "0x1234567890123456789012345678901234567890"; // 替换为实际的合约地址
 

@@ -201,8 +201,8 @@ const SwapComponent = () => {
         if (typeof calculateSwapOutput === "function") {
           const swapResult = calculateSwapOutput(
             amountInAfterFee,
-            selectedPool.sqrtPriceX96,
-            selectedPool.liquidity,
+            typeof selectedPool.sqrtPriceX96 === 'string' ? BigInt(selectedPool.sqrtPriceX96) : selectedPool.sqrtPriceX96,
+            typeof selectedPool.liquidity === 'string' ? BigInt(selectedPool.liquidity) : selectedPool.liquidity,
             selectedPool.fee,
             zeroForOne,
             tokenIn.decimals,

@@ -26,7 +26,8 @@ export interface SwapQuote {
   gasEstimate?: number;
   gasEstimateFormatted?: string;
   lastUpdated: number;
-  error?: string;
+  error?: string | null;
   isMultiHop?: boolean;
-  liquidityStatus?: 'sufficient' | 'low' | 'insufficient';
+  liquidityStatus?: 'sufficient' | 'low' | 'insufficient' | 'critical' | 'unknown';
+  path?: number[];
 }
