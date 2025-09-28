@@ -35,6 +35,8 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/provider";
 
 import { usePoolManagerWithClients } from "@/hooks/usePoolManagerWithClients";
+import SparklineChart from "@/components/SparklineChart";
+import { generateTokenPairSparklineData, getSparklineColor } from "@/utils/generateSparklineData";
 
 interface PoolTableProps {
   itemsPerPage?: number;
@@ -80,6 +82,14 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
 
     loadPools();
   }, []);
+
+  // 生成模拟的 sparkline 数据
+  const sparklineData = useMemo(() => {
+    return poolsInfo.map(pool => ({
+      data: generateTokenPairSparklineData(pool.token0?.symbol || 'Token0', pool.token1?.symbol || 'Token1'),
+      color: getSparklineColor(generateTokenPairSparklineData(pool.token0?.symbol || 'Token0', pool.token1?.symbol || 'Token1'))
+    }));
+  }, [poolsInfo]);
 
   // 使用 useMemo 优化分页计算
   const { totalPages, currentPools, paginationInfo } = useMemo(() => {
@@ -127,18 +137,19 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
             <TableHead className="w-[200px]">Set price range</TableHead>
             <TableHead className="w-[150px]">Current price</TableHead>
             <TableHead className="w-[120px]">Liquidity</TableHead>
+            <TableHead className="w-[120px]">Price Chart</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-10">
+              <TableCell colSpan={6} className="text-center py-10">
                 Loading pools...
               </TableCell>
             </TableRow>
           ) : currentPools.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-10">
+              <TableCell colSpan={6} className="text-center py-10">
                 No pools found
               </TableCell>
             </TableRow>
@@ -162,6 +173,16 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
                 </TableCell>
                 <TableCell className="w-[120px] truncate" title={formatLiquidity(typeof pool.liquidity === 'string' ? BigInt(pool.liquidity) : pool.liquidity)}>
                   {formatLiquidity(typeof pool.liquidity === 'string' ? BigInt(pool.liquidity) : pool.liquidity)}
+                </TableCell>
+                <TableCell className="w-[120px]">
+                  {sparklineData[index] && (
+                    <SparklineChart
+                      data={sparklineData[index].data}
+                      width={100}
+                      height={40}
+                      color={sparklineData[index].color}
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             ))

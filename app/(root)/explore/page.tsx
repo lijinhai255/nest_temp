@@ -47,6 +47,38 @@ const ExplorePage = () => {
           </div>
         </section>
 
+        {/* Featured Tokens */}
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
+            🚀 Featured Trading Pairs
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { symbol: 'btc', name: 'Bitcoin', exchange: 'BINANCE' },
+              { symbol: 'eth', name: 'Ethereum', exchange: 'BINANCE' },
+              { symbol: 'sol', name: 'Solana', exchange: 'BINANCE' },
+              { symbol: 'bnb', name: 'Binance Coin', exchange: 'BINANCE' },
+              { symbol: 'xrp', name: 'Ripple', exchange: 'BINANCE' },
+              { symbol: 'ada', name: 'Cardano', exchange: 'BINANCE' },
+            ].map((token) => (
+              <a
+                key={token.symbol}
+                href={`/explore/${token.symbol}`}
+                className="block bg-card border border-border rounded-xl p-6 hover:border-primary/50 transition-all duration-300 hover:scale-105 hover:shadow-lg"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-foreground">{token.name}</h3>
+                  <span className="text-sm text-muted-foreground">{token.exchange}</span>
+                </div>
+                <p className="text-2xl font-mono text-green-500 mb-2">{token.symbol.toUpperCase()}</p>
+                <div className="text-sm text-muted-foreground">
+                  Click for detailed analysis →
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+
         {/* Crypto Screener */}
         <section className="mb-12">
           <TradingViewWidget
