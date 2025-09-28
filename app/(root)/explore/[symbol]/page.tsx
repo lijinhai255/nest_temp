@@ -17,12 +17,12 @@ const CryptoDetailPage = () => {
 
   if (!symbol) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Symbol not found</h1>
+          <h1 className="text-4xl font-bold text-foreground mb-4">Symbol not found</h1>
           <Link
             href="/explore"
-            className="text-blue-400 hover:text-blue-300 underline"
+            className="text-primary hover:text-primary/80 underline"
           >
             Back to Explore
           </Link>
@@ -32,21 +32,21 @@ const CryptoDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header with Back Button */}
         <div className="mb-8">
           <Link
             href="/explore"
-            className="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors mb-4"
+            className="inline-flex items-center text-primary hover:text-primary/80 transition-colors mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Explore
           </Link>
-          <h1 className="text-4xl font-bold text-white mb-2">
+          <h1 className="text-4xl font-bold text-foreground mb-2">
             📊 {symbol.toUpperCase()} Analysis
           </h1>
-          <p className="text-xl text-gray-300">
+          <p className="text-xl text-foreground">
             Comprehensive trading analysis and real-time charts for {symbol.toUpperCase()}
           </p>
         </div>
@@ -60,7 +60,7 @@ const CryptoDetailPage = () => {
                 scriptUrl={`${scriptUrl}symbol-info.js`}
                 config={CRYPTO_SYMBOL_INFO_CONFIG(symbol)}
                 height={170}
-                className="rounded-xl border border-gray-700/50 bg-gray-800/30 backdrop-blur-sm"
+                className="rounded-xl border border bg-card"
               />
             </div>
             <div className="lg:col-span-3">
@@ -69,7 +69,7 @@ const CryptoDetailPage = () => {
                 scriptUrl={`${scriptUrl}advanced-chart.js`}
                 config={CRYPTO_CHART_CONFIG(`BINANCE:${symbol}USDT`)}
                 height={600}
-                className="rounded-xl border border-gray-700/50 bg-gray-800/30 backdrop-blur-sm"
+                className="rounded-xl border border bg-card"
               />
             </div>
           </div>
@@ -84,7 +84,7 @@ const CryptoDetailPage = () => {
                 scriptUrl={`${scriptUrl}technical-analysis.js`}
                 config={CRYPTO_TECHNICAL_ANALYSIS_CONFIG(`BINANCE:${symbol}USDT`)}
                 height={500}
-                className="rounded-xl border border-gray-700/50 bg-gray-800/30 backdrop-blur-sm"
+                className="rounded-xl border border bg-card"
               />
             </div>
             <div>
@@ -96,7 +96,7 @@ const CryptoDetailPage = () => {
                   style: '8', // Different chart style
                 }}
                 height={500}
-                className="rounded-xl border border-gray-700/50 bg-gray-800/30 backdrop-blur-sm"
+                className="rounded-xl border border bg-card"
               />
             </div>
           </div>
@@ -130,27 +130,27 @@ const CryptoDetailPage = () => {
                   ],
                 }}
                 height={400}
-                className="rounded-xl border border-gray-700/50 bg-gray-800/30 backdrop-blur-sm"
+                className="rounded-xl border border bg-card"
               />
             </div>
             <div>
-              <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 h-full">
-                <h3 className="text-2xl font-bold text-white mb-4">💡 Trading Insights</h3>
-                <div className="space-y-4 text-gray-300">
+              <div className="bg-card border border-border rounded-xl p-6 h-full">
+                <h3 className="text-2xl font-bold text-foreground mb-4">💡 Trading Insights</h3>
+                <div className="space-y-4 text-foreground">
                   <div>
-                    <h4 className="font-semibold text-white mb-2">Market Sentiment</h4>
+                    <h4 className="font-semibold text-foreground mb-2">Market Sentiment</h4>
                     <p>Real-time technical analysis indicators provide insights into current market conditions and potential price movements.</p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-white mb-2">Key Levels</h4>
+                    <h4 className="font-semibold text-foreground mb-2">Key Levels</h4>
                     <p>Support and resistance levels are automatically calculated based on historical price action and volume data.</p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-white mb-2">Risk Management</h4>
+                    <h4 className="font-semibold text-foreground mb-2">Risk Management</h4>
                     <p>Always use proper risk management techniques and consider setting stop-loss orders when trading volatile crypto assets.</p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-white mb-2">Data Source</h4>
+                    <h4 className="font-semibold text-foreground mb-2">Data Source</h4>
                     <p>All data is provided in real-time from Binance exchange, one of the largest and most liquid cryptocurrency exchanges.</p>
                   </div>
                 </div>
@@ -161,7 +161,7 @@ const CryptoDetailPage = () => {
 
         {/* Related Tokens */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold text-white mb-8 text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
             🔗 Related Trading Pairs
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -174,9 +174,9 @@ const CryptoDetailPage = () => {
               <Link
                 key={token.symbol}
                 href={`/explore/${token.symbol}`}
-                className="block bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 hover:scale-105"
+                className="block bg-card border border-border rounded-xl p-6 hover:border-primary/50 transition-all duration-300 hover:scale-105"
               >
-                <h3 className="text-xl font-bold text-white mb-2">{token.name}</h3>
+                <h3 className="text-xl font-bold text-foreground mb-2">{token.name}</h3>
                 <p className="text-lg font-mono text-green-400">{token.symbol}</p>
                 <p className="text-sm text-gray-400 mt-2">Click for detailed analysis</p>
               </Link>

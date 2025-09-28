@@ -212,7 +212,7 @@ export const CRYPTO_TECHNICAL_ANALYSIS_CONFIG = (symbol: string) => ({
   showIntervalTabs: true,
   displayMode: 'single',
   locale: 'en',
-  colorTheme: 'light',
+  colorTheme: 'dark',
 });
 
 // Symbol Info Widget Configuration
@@ -221,6 +221,6 @@ export const CRYPTO_SYMBOL_INFO_CONFIG = (symbol: string) => ({
   width: '100%',
   isTransparent: true,
   height: 170,
-  colorTheme: 'light',
+  colorTheme: 'dark',
   locale: 'en',
 });
