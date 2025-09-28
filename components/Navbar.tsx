@@ -24,6 +24,9 @@ export default function Navbar() {
           <Link className="hover:text-primary transition-colors" href="/pool">
             <span>Pool</span>
           </Link>
+          <Link className="hover:text-primary transition-colors" href="/explore">
+            <span>Explore</span>
+          </Link>
           <ThemeToggle />
           <ConnectionButton />
         </div>
