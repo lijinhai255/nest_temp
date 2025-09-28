@@ -19,13 +19,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   // 使用 useEffect 避免服务器端渲染不匹配问题
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "dark"; // 默认为 dark
+    const savedTheme = localStorage.getItem("theme") || "light"; // 默认为 light
     setTheme(savedTheme);
+
+    // 强制移除dark类，确保使用light主题
+    document.documentElement.classList.remove("dark");
 
     if (savedTheme === "dark") {
       document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("light");
     }
   }, []);
 

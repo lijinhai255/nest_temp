@@ -5,7 +5,7 @@ export const CRYPTO_MARKET_OVERVIEW_CONFIG = {
   showChart: true,
   locale: 'en',
   largeChartUrl: '',
-  isTransparent: true,
+  isTransparent: false,
   showSymbolLogo: true,
   showFloatingTooltip: true,
   width: '100%',
@@ -62,7 +62,7 @@ export const CRYPTO_HEATMAP_CONFIG = {
   blockSize: 'market_cap',
   blockColor: 'change',
   grouping: 'sector',
-  isTransparent: true,
+  isTransparent: false,
   locale: 'en',
   symbolUrl: '',
   colorTheme: 'light',
@@ -120,7 +120,7 @@ export const TOP_CRYPTO_CONFIG = {
   ],
   showSymbolLogo: true,
   colorTheme: 'light',
-  isTransparent: true,
+  isTransparent: false,
   displayMode: 'adaptive',
   width: '100%',
   height: 600,
@@ -136,7 +136,7 @@ export const CRYPTO_SCREENER_CONFIG = {
   displayCurrency: 'USD',
   colorTheme: 'light',
   locale: 'en',
-  isTransparent: true,
+  isTransparent: false,
 };
 
 // Advanced Chart Widget Configuration for specific crypto
@@ -195,7 +195,7 @@ export const CRYPTO_MARKET_DATA_CONFIG = {
   ],
   showSymbolLogo: true,
   colorTheme: 'light',
-  isTransparent: true,
+  isTransparent: false,
   displayMode: 'adaptive',
   width: '100%',
   height: 600,
@@ -212,7 +212,7 @@ export const CRYPTO_TECHNICAL_ANALYSIS_CONFIG = (symbol: string) => ({
   showIntervalTabs: true,
   displayMode: 'single',
   locale: 'en',
-  colorTheme: 'dark',
+  colorTheme: 'light',
 });
 
 // Symbol Info Widget Configuration
@@ -221,6 +221,6 @@ export const CRYPTO_SYMBOL_INFO_CONFIG = (symbol: string) => ({
   width: '100%',
   isTransparent: true,
   height: 170,
-  colorTheme: 'dark',
+  colorTheme: 'light',
   locale: 'en',
 });
