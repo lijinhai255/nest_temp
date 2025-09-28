@@ -22,6 +22,7 @@ import {
   formatLiquidity,
   formatCurrentPrice,
 } from "@/utils/poolFormatters";
+import { getTokenInfo } from "@/types/addPosition";
 import {
   Dialog,
   DialogContent,
@@ -85,10 +86,25 @@ const PoolTable: React.FC<PoolTableProps> = ({ itemsPerPage = 10 }) => {
 
   // 生成模拟的 sparkline 数据
   const sparklineData = useMemo(() => {
-    return poolsInfo.map(pool => ({
-      data: generateTokenPairSparklineData(pool.token0?.symbol || 'Token0', pool.token1?.symbol || 'Token1'),
-      color: getSparklineColor(generateTokenPairSparklineData(pool.token0?.symbol || 'Token0', pool.token1?.symbol || 'Token1'))
-    }));
+    return poolsInfo.map(pool => {
+      try {
+        const token0Info = getTokenInfo(pool.token0);
+        const token1Info = getTokenInfo(pool.token1);
+        const token0Symbol = token0Info?.symbol || 'Token0';
+        const token1Symbol = token1Info?.symbol || 'Token1';
+
+        return {
+          data: generateTokenPairSparklineData(token0Symbol, token1Symbol),
+          color: getSparklineColor(generateTokenPairSparklineData(token0Symbol, token1Symbol))
+        };
+      } catch (error) {
+        // 如果获取代币信息失败，使用默认值
+        return {
+          data: generateTokenPairSparklineData('Token0', 'Token1'),
+          color: getSparklineColor(generateTokenPairSparklineData('Token0', 'Token1'))
+        };
+      }
+    });
   }, [poolsInfo]);
 
   // 使用 useMemo 优化分页计算
