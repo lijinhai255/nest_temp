@@ -118,6 +118,16 @@ const CryptoDetailPage = () => {
                   height: 400,
                   isTransparent: true,
                   showSymbolLogo: true,
+                  showFloatingTooltip: true,
+                  plotLineColorGrowing: '#26a69a',
+                  plotLineColorFalling: '#ef5350',
+                  gridLineColor: 'rgba(240, 243, 250, 0)',
+                  scaleFontColor: '#DBDBDB',
+                  belowLineFillColorGrowing: 'rgba(38, 166, 154, 0.12)',
+                  belowLineFillColorFalling: 'rgba(239, 83, 80, 0.12)',
+                  belowLineFillColorGrowingBottom: 'rgba(38, 166, 154, 0)',
+                  belowLineFillColorFallingBottom: 'rgba(239, 83, 80, 0)',
+                  symbolActiveColor: 'rgba(38, 166, 154, 0.05)',
                   tabs: [
                     {
                       title: 'Related Tokens',
