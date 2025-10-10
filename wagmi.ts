@@ -1,14 +1,4 @@
-import { connectorsForWallets, getWalletConnectConnector } from '@rainbow-me/rainbowkit';
-import { 
-  metaMaskWallet, 
-  trustWallet,
-  coinbaseWallet,
-  walletConnectWallet,
-  injectedWallet,
-  okxWallet,
-  safeWallet,
-  imTokenWallet
-} from '@rainbow-me/rainbowkit/wallets';
+import { getWalletConnectConnector } from '@rainbow-me/rainbowkit';
 
 import { mainnet, polygon, optimism, arbitrum, base, sepolia } from 'wagmi/chains';
 import { http, createConfig, createStorage } from 'wagmi';
@@ -44,12 +34,7 @@ export const walletConfig =
     appName: 'YC Directory',
     projectId: projectId,
   }  
-// 自定义钱包配置
-export const connectors = connectorsForWallets(
-  walletList,
-  walletConfig
- 
-);
+// 暂时移除自定义钱包配置以避免构建错误
 
 // 创建 Wagmi 配置
 export const config = createConfig({
@@ -62,7 +47,6 @@ export const config = createConfig({
     [base.id]: http(),
     [sepolia.id]: http(),
   },
-  connectors,
   ssr: true,
   // 🔄 添加持久化存储配置
   storage: createStorage({
