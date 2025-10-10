@@ -20,24 +20,13 @@ export const queryClient = new QueryClient();
 export const chains = [sepolia, mainnet, polygon, optimism, arbitrum, base] as const;
 export const projectId = '2e789d28c2f0380f39fc2a7bd198dee7';
 export const walletList =  [
-    // {
-    //   groupName: '推荐',
-    //   wallets: [
-    //     metaMaskWallet,
-    //     okxWallet,
-    //     imTokenWallet,
-    //     coinbaseWallet,
-    //     trustWallet,
-    //   ],
-    // },
-    // {
-    //   groupName: '其他',
-    //   wallets: [
-    //     walletConnectWallet,
-    //     injectedWallet,
-    //     safeWallet,
-    //   ],
-    // },
+    {
+      groupName: '推荐',
+      wallets: [
+        metaMaskWallet,
+        okxWallet,
+      ],
+    },
   ];
 export const walletConfig = 
   {
